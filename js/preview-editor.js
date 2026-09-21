@@ -174,7 +174,7 @@ FE.PreviewEditor = (function () {
     FE.UI.buildSettingsFields(fields, FE.Model.resolveLineSettings(getSheet(), line), function (key, value) {
       line.overrides[key] = value;
       updateReset();
-      onChange();
+      onChange("l:" + line.id + ":" + key); // même clé = un seul pas d'annulation par geste
     });
 
     resetBtn.addEventListener("click", function () {
@@ -712,6 +712,7 @@ FE.PreviewEditor = (function () {
     select: select,
     syncBar: syncBar,
     renderOptions: renderOptions,
+    cancelEdit: function () { finishEdit(true); },
     getSelectedId: function () { return selectedLineId; }
   };
 })();

@@ -6,8 +6,10 @@ window.FE = window.FE || {};
   document.addEventListener("DOMContentLoaded", function () {
     var previewEl = document.getElementById("fiche-preview");
 
+    // Au démarrage, on reprend le brouillon de la session précédente s'il y en a un.
+    var draft = FE.Storage.loadDraft();
     var appState = {
-      sheet: FE.Model.createDefaultSheet()
+      sheet: draft ? FE.Model.validateSheet(draft) : FE.Model.createDefaultSheet()
     };
 
     // Mise à l'échelle responsive : la fiche est dimensionnée en mm
@@ -70,8 +72,25 @@ window.FE = window.FE || {};
       }).catch(function () {});
     }
 
-    FE.PreviewEditor.init(previewEl, document.getElementById("selection-layer"), function () { return appState.sheet; }, function () { rerenderPreview(appState.sheet); });
+    FE.PreviewEditor.init(previewEl, document.getElementById("selection-layer"), function () { return appState.sheet; }, function (key) {
+      rerenderPreview(appState.sheet);
+      FE.History.commit(key);
+    });
     FE.UI.init(appState, rerenderPreview);
+
+    // Annuler / rétablir : on remplace la fiche par l'instantané puis on
+    // reconstruit le panneau et l'aperçu (la sélection est conservée si la
+    // ligne existe encore).
+    FE.History.init({
+      getSheet: function () { return appState.sheet; },
+      applySheet: function (sheet) {
+        FE.PreviewEditor.cancelEdit();
+        appState.sheet = FE.Model.validateSheet(sheet);
+        FE.UI.reload();
+      }
+    });
+    FE.History.reset();
+    FE.UI.bindHistory();
 
     // Les polices embarquées (@font-face) se chargent de façon asynchrone.
     // Si le premier rendu a eu lieu avant leur chargement, la mesure du

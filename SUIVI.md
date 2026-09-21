@@ -28,6 +28,7 @@ css/sheet.css            page imprimable (.fiche-page), conteneur de ligne (.lig
 js/model.js               FE.Model — modèle de données, defaults, validation/migration
 js/fonts-catalog.js        FE.Fonts — catalogue polices (Caveat, Patrick Hand, Dancing Script)
 js/storage.js               FE.Storage — CRUD localStorage des fiches
+js/history.js                   FE.History — annuler/rétablir + brouillon auto
 js/skeleton.js                 FE.Skeleton — ligne centrale des lettres (pointillé simple)
 js/preview-editor.js            FE.PreviewEditor — sélection d'un bloc sur l'aperçu (couche #selection-layer)
 js/dotted-text.js            FE.DottedText — génère le SVG de chaque ligne (mots + repères de réglure)
@@ -112,10 +113,10 @@ par l'utilisateur et annulée.
 ### Refonte « édition sur l'aperçu » — branche `edition-sur-apercu` (plan : `~/.claude/plans/pasted-content-id-6291-q2-velvet-pearl.md`)
 
 Objectif : éditer directement sur l'aperçu façon Notion. 4 étapes, un commit
-chacune, `main` intact jusqu'à validation. **Étapes 1, 2 et 3 faites** (blocs, pages
+chacune, `main` intact jusqu'à validation. **Étapes 1 à 4 faites** (blocs, pages
 multiples, sélection ; édition sur place, barre flottante, panneau gauche
-réduit ; glisser-déposer, ajout/suppression). À faire : 4 annuler/rétablir +
-brouillon auto.
+réduit ; glisser-déposer, ajout/suppression ; annuler/rétablir + brouillon
+auto). Reste : validation par l'utilisateur, puis merge dans `main` (non fait).
 
 - `renderSheet` produit `.fiche-pages` > N `.fiche-page` (210×297mm fixes) >
   `.fiche-bloc[data-line-id]` > `.ligne-ecriture`. Titre + consigne en page 1
@@ -172,6 +173,27 @@ brouillon auto.
     `no-print`, hors flux).
   - Test headless : requêter le DOM au moment de l'action (un rendu après
     chargement des polices remplace tout, les références sont périmées).
+
+- **Étape 4** :
+  - `FE.History` (`js/history.js`, sans DOM) : pile d'instantanés JSON (max 100).
+    `commit(key)` : même `key` dans les 1,2 s = fusion en une entrée (curseur
+    tiré = 1 pas ; clés `g:<réglage>` global, `l:<idLigne>:<réglage>` par
+    bloc) ; sans clé = 1 entrée. Un commit identique à l'état courant est
+    ignoré ; un nouveau commit efface le « rétablir ».
+  - Points d'appel : callback `onChange(key)` de `FE.PreviewEditor` (défini
+    dans `main.js` : rendu + `History.commit(key)`) et réglages globaux dans
+    `ui-controls.js`. `History.reset()` après ouverture / fiche chargée /
+    nouvelle fiche (pile vidée).
+  - Ctrl+Z, Ctrl+Y, Ctrl+Maj+Z (`ui-controls.js` `bindHistory`) sauf dans un
+    champ de texte / le champ de saisie sur place (annulation native du
+    navigateur) ; boutons Annuler/Rétablir en haut du panneau.
+  - Brouillon : `FE.Storage.saveDraft/loadDraft` (clé
+    `ficheEcriture:v1:draft`), écrit 500 ms après chaque commit et à chaque
+    `reset()`, restauré au démarrage (`main.js`, via `validateSheet`). Distinct
+    des fiches nommées (`Enregistrer`). L'annulation ne survit pas au
+    rechargement (seule la fiche est restaurée).
+  - Test headless avec persistance : deux lancements Chrome avec le même
+    `--user-data-dir` (localStorage partagé), le 2e avec `#reload`.
 
 ### Retour à la ligne et nombre de lignes (2026-09-21, non commité)
 

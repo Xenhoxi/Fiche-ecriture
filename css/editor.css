@@ -10,7 +10,31 @@
 
 .sidebar h1 {
   font-size: 18px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+}
+
+.history-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.history-bar button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.draft-status {
+  flex: 1 0 100%;
+  font-size: 11px;
+  color: var(--color-muted);
+  min-height: 14px;
+}
+
+.draft-status.is-error {
+  color: var(--color-danger);
 }
 
 .sidebar section {

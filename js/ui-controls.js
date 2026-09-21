@@ -149,6 +149,7 @@ FE.UI = (function () {
     buildSettingsFields(dom.globalSettings, appState.sheet.settings, function (key, value) {
       appState.sheet.settings[key] = value;
       triggerUpdate();
+      FE.History.commit("g:" + key);
       // La barre de réglages d'un bloc affiche aussi les valeurs héritées.
       FE.PreviewEditor.syncBar();
     });
@@ -168,6 +169,7 @@ FE.UI = (function () {
     appState.sheet = FE.Model.validateSheet(sheet);
     FE.PreviewEditor.select(null);
     refreshAll();
+    FE.History.reset();
   }
 
   function refreshSavedList() {
@@ -244,6 +246,7 @@ FE.UI = (function () {
       appState.sheet = FE.Model.createDefaultSheet();
       FE.PreviewEditor.select(null);
       refreshAll();
+      FE.History.reset();
     });
   }
 
@@ -263,6 +266,50 @@ FE.UI = (function () {
     FE.PreviewEditor.syncBar();
   }
 
+  // ---- Annuler / rétablir ----
+
+  function isTextField(el) {
+    if (!el) return false;
+    if (el.isContentEditable || el.tagName === "TEXTAREA") return true;
+    if (el.tagName !== "INPUT") return false;
+    return ["range", "checkbox", "radio", "button"].indexOf(el.type) === -1;
+  }
+
+  function formatTime(d) {
+    return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function updateHistoryUi() {
+    var undoBtn = qs("btn-undo");
+    var redoBtn = qs("btn-redo");
+    var status = qs("draft-status");
+    undoBtn.disabled = !FE.History.canUndo();
+    redoBtn.disabled = !FE.History.canRedo();
+    var st = FE.History.getDraftStatus();
+    status.classList.toggle("is-error", st.state === "error");
+    if (st.state === "saved") status.textContent = "Brouillon enregistré à " + formatTime(st.at);
+    else if (st.state === "error") status.textContent = "Brouillon non enregistré (stockage indisponible)";
+    else status.textContent = "";
+  }
+
+  function bindHistory() {
+    qs("btn-undo").addEventListener("click", function () { FE.History.undo(); });
+    qs("btn-redo").addEventListener("click", function () { FE.History.redo(); });
+    document.addEventListener("keydown", function (e) {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      var k = e.key.toLowerCase();
+      var isUndo = k === "z" && !e.shiftKey;
+      var isRedo = k === "y" || (k === "z" && e.shiftKey);
+      if (!isUndo && !isRedo) return;
+      // Dans un champ de texte, on laisse l'annulation native du navigateur.
+      if (isTextField(e.target)) return;
+      e.preventDefault();
+      if (isUndo) FE.History.undo(); else FE.History.redo();
+    });
+    FE.History.subscribe(updateHistoryUi);
+    updateHistoryUi();
+  }
+
   function init(state, rerenderFn) {
     appState = state;
     rerenderPreview = rerenderFn;
@@ -273,5 +320,5 @@ FE.UI = (function () {
     refreshSavedList();
   }
 
-  return { init: init, buildSettingsFields: buildSettingsFields };
+  return { init: init, reload: refreshAll, bindHistory: bindHistory, buildSettingsFields: buildSettingsFields };
 })();
