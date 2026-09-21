@@ -5,27 +5,25 @@
 
 ## État du dépôt — À LIRE EN PREMIER
 
-- **`main`** (= `origin/main`, commit `a533e25`) : ce que GitHub Pages publie
-  (https://xenhoxi.github.io/fiche-ecriture/). Contient retour à la ligne,
-  « Nombre de lignes », pointillé simple/double, polices Marelle. **Ne pas y
-  toucher sans accord explicite de l'utilisateur.**
-- **`edition-sur-apercu`** (poussée sur `origin`, **PAS mergée** — l'utilisateur
-  a dit « push mais ne merge pas ») : refonte « édition directe sur
-  l'aperçu » (étapes 1 à 4, voir plus bas) + retouches demandées ensuite
-  (bouton « + Ajouter une ligne » sous la dernière ligne, ancien texte masqué
-  pendant la saisie, titre/consigne en direct avec Entrée/Maj+Entrée, outils du
-  bloc persistants + désélection hors feuille, boutons dupliquer/supprimer,
-  curseur de taille fluide). Session de travail : cette branche.
-- **Tester la branche sans merge : en attente.** L'utilisateur a répondu « on ne
-  fait rien pour l'instant ». Options déjà exposées : (1) test local — worktree
-  + `python3 -m http.server`, ou ouvrir `index.html` (marche en `file://`) ;
-  (2) dépôt de prévisualisation séparé avec Pages ; (3) basculer la source de
-  Pages sur la branche (REMPLACE le site en ligne) ; (4) workflow GitHub
-  Actions (main à la racine + branche sous `/preview/`, oblige à commiter sur
-  `main`). Faits : Pages = build « legacy », source `main` `/`, dépôt public,
-  aucun `.github/`, `gh` connecté (compte `Xenhoxi`). `localStorage` est propre à
-  chaque adresse (site, `localhost:port`, `file://`) : une préversion ne voit
-  pas les fiches enregistrées du site en ligne.
+- **`main`** (= `origin/main`, GitHub Pages : https://xenhoxi.github.io/fiche-ecriture/) :
+  contient MAINTENANT la refonte « édition directe sur l'aperçu » (fusion
+  `0274553` de `edition-sur-apercu`, faite sur demande explicite de l'utilisateur
+  le 2026-09-21 pour pouvoir la tester en ligne), en plus du retour à la ligne, du
+  « Nombre de lignes », du pointillé simple/double et des polices Marelle.
+- **`edition-sur-apercu`** : conservée (poussée sur `origin`), non supprimée ;
+  identique à `main` au moment de la fusion. Les nouveautés se font désormais sur
+  une nouvelle branche ou sur `main` selon ce que demande l'utilisateur.
+- Ce qui a été fusionné : pages multiples, édition sur place (texte, titre,
+  consigne), barre flottante de réglages, glisser-déposer, ajout/duplication/
+  suppression au survol, annuler/rétablir + brouillon automatique, bouton
+  « + Ajouter une ligne » sous la dernière ligne, outils persistants +
+  désélection hors feuille, curseur de taille fluide (détails plus bas).
+- **À faire : essai réel par l'utilisateur sur le site en ligne** (souris,
+  clavier, impression réelle) — tout a été vérifié seulement en headless.
+  Pour revenir en arrière si besoin : `git revert -m 1 0274553` (ou repartir de
+  `a533e25`, l'ancienne `main`). Pages met 1–2 min à se mettre à jour après un
+  push ; `localStorage` est propre à chaque adresse (les fiches enregistrées sur
+  `localhost` ou `file://` n'apparaissent pas sur le site en ligne).
 
 ## Quoi
 
@@ -137,12 +135,11 @@ par l'utilisateur et annulée.
 ### Refonte « édition sur l'aperçu » — branche `edition-sur-apercu` (plan : `~/.claude/plans/pasted-content-id-6291-q2-velvet-pearl.md`)
 
 Objectif : éditer directement sur l'aperçu façon Notion. 4 étapes, un commit
-chacune, `main` intact jusqu'à validation. **Étapes 1 à 4 faites** (blocs, pages
+chacune. **Étapes 1 à 4 faites** (blocs, pages
 multiples, sélection ; édition sur place, barre flottante, panneau gauche
 réduit ; glisser-déposer, ajout/suppression ; annuler/rétablir + brouillon
-auto), plus les retouches listées dans « État du dépôt ». La branche est
-poussée ; reste : validation par l'utilisateur, puis merge dans `main` (NON
-fait, à ne faire que sur demande explicite).
+auto), plus les retouches listées dans « État du dépôt ». **Fusionné dans
+`main` le 2026-09-21** (reste : essai réel par l'utilisateur).
 
 - `renderSheet` produit `.fiche-pages` > N `.fiche-page` (210×297mm fixes) >
   `.fiche-bloc[data-line-id]` > `.ligne-ecriture`. Titre + consigne en page 1
@@ -241,7 +238,7 @@ fait, à ne faire que sur demande explicite).
   - Test headless avec persistance : deux lancements Chrome avec le même
     `--user-data-dir` (localStorage partagé), le 2e avec `#reload`.
 
-### Retour à la ligne et nombre de lignes (2026-09-21, sur `main`)
+### Retour à la ligne et nombre de lignes (2026-09-21)
 
 - `FE.DottedText.planRows()` découpe le texte en fragments : un fragment doit
   tenir 2× dans la largeur (modèle + ≥1 répétition pointillée), sinon retour
@@ -256,7 +253,7 @@ fait, à ne faire que sur demande explicite).
   fin des mesures. Elle vaut aussi 0 tant que la police n'est pas chargée
   (rattrapé par `reloadIfFontsPending`).
 
-### Pointillé simple / double (2026-09-21, sur `main`)
+### Pointillé simple / double (2026-09-21)
 
 - `dotStyle` (toggle « Pointillés doubles », global + par ligne), défaut
   `"single"`. `"double"` = ancien rendu (contour du glyphe pointillé, donc
@@ -309,7 +306,7 @@ Sources `.ttf`/`.otf` + PDF spécimen dans `marelle-ttf/` et
 - Rendu Caveat en contour pointillé : semble très chargé (constaté
   2026-09-21, non modifié).
 
-### UI (`ui-controls.js` + `preview-editor.js`, sur la branche `edition-sur-apercu`)
+### UI (`ui-controls.js` + `preview-editor.js`)
 
 - Le panneau de gauche est **réduit** : annuler/rétablir + état du brouillon,
   réglages globaux, fiches sauvegardées (Nouvelle / Enregistrer / Charger /
@@ -323,8 +320,6 @@ Sources `.ttf`/`.otf` + PDF spécimen dans `marelle-ttf/` et
 - Responsive : `.fiche-pages` mis à l'échelle via `transform: scale()` en JS
   (`main.js`) si le conteneur est trop étroit ; `print.css` neutralise ce
   transform à l'impression.
-- **Sur `main`** (version publiée), l'UI est encore l'ancienne : liste de lignes
-  dans le panneau, ⚙ par ligne en accordéon.
 
 ## Méthode de test qui marche (à réutiliser)
 
@@ -370,8 +365,8 @@ Sources `.ttf`/`.otf` + PDF spécimen dans `marelle-ttf/` et
 
 ## Points ouverts pour la prochaine session
 
-- **Décisions en attente de l'utilisateur** : comment tester la branche sans merge
-  (voir « État du dépôt ») ; quand/si merger `edition-sur-apercu` dans `main`.
+- Décision prise : la branche a été fusionnée dans `main` pour être testée en ligne
+  (la question « tester sans merge » est donc caduque).
 - **Rien n'a été essayé avec une vraie souris / un vrai clavier** : glisser-déposer,
   saisie sur place (Maj+Entrée), curseurs, menu — tout a été vérifié par événements
   synthétiques en headless. Un essai réel par l'utilisateur est le prochain test utile.
@@ -397,10 +392,11 @@ Sources `.ttf`/`.otf` + PDF spécimen dans `marelle-ttf/` et
 ## Pour reprendre
 
 1. Lire ce fichier (surtout « État du dépôt »). Vérifier `git branch --show-current`
-   (le travail est sur `edition-sur-apercu`) et `git status`.
+   et `git status` (la refonte est dans `main`).
 2. Relire, selon le sujet : `js/preview-editor.js` (édition sur l'aperçu),
    `js/render.js` (pagination), `js/history.js`, `js/dotted-text.js`,
    `js/skeleton.js`, `js/ui-controls.js`, `css/sheet.css`, `css/editor.css`.
-3. Ne PAS merger dans `main` ni publier sans demande explicite.
+3. Ne pas publier (push sur `main`) sans demande explicite : chaque push sur `main`
+   met à jour le site en ligne.
 4. Relancer le serveur local et tester dans le navigateur avant toute nouvelle
    modification (méthode ci-dessus), l'arrêter en fin de session.
