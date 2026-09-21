@@ -30,6 +30,13 @@ FE.PreviewEditor = (function () {
   var addingConsigne = false;
   var wasSelectedOnDown = false;
 
+  var toolsEl = null;        // « + » et poignée ⠿ affichés au survol d'un bloc
+  var menuEl = null;         // menu du bloc (poignée cliquée sans glisser)
+  var dropEl = null;         // trait d'insertion pendant un glisser-déposer
+  var hoverId = null;
+  var hoverTimer = 0;
+  var drag = null;           // { id, x, y, startX, startY, moved, raf }
+
   // ---- utilitaires ----
 
   function findLine(id) {
@@ -97,6 +104,7 @@ FE.PreviewEditor = (function () {
     }
     drawBoxes();
     positionBar();
+    positionTools();
     if (editing) positionEditor();
   }
 
@@ -113,6 +121,7 @@ FE.PreviewEditor = (function () {
   }
 
   function moveLine(line, delta) {
+    if (!line) return;
     var lines = getSheet().lines;
     var i = lines.indexOf(line);
     var j = i + delta;
@@ -124,6 +133,7 @@ FE.PreviewEditor = (function () {
   }
 
   function deleteLine(line) {
+    if (!line) return;
     var lines = getSheet().lines;
     lines.splice(lines.indexOf(line), 1);
     selectedLineId = null;
@@ -131,7 +141,7 @@ FE.PreviewEditor = (function () {
     onChange();
   }
 
-  // (Re)construit la barre pour la ligne sélectionnée : titre, ↑ ↓ ✕, champs
+  // (Re)construit la barre pour la ligne sélectionnée : titre, champs
   // de réglages (valeurs résolues ; celles qui diffèrent des réglages globaux
   // sont marquées d'un point), lien « revenir aux réglages globaux ».
   function buildBar() {
@@ -146,22 +156,7 @@ FE.PreviewEditor = (function () {
     var title = document.createElement("span");
     title.className = "floating-bar-title";
     title.textContent = "Réglages de ce bloc";
-    var actions = document.createElement("span");
-    actions.className = "floating-bar-actions";
-    [["↑", "Monter", function () { moveLine(line, -1); }],
-     ["↓", "Descendre", function () { moveLine(line, 1); }],
-     ["✕", "Supprimer ce bloc", function () { deleteLine(line); }]].forEach(function (a) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "small" + (a[0] === "✕" ? " danger" : "");
-      b.textContent = a[0];
-      b.title = a[1];
-      b.setAttribute("aria-label", a[1]);
-      b.addEventListener("click", a[2]);
-      actions.appendChild(b);
-    });
     head.appendChild(title);
-    head.appendChild(actions);
 
     var fields = document.createElement("div");
     fields.className = "floating-bar-fields";
@@ -389,6 +384,202 @@ FE.PreviewEditor = (function () {
     startEdit("line", line.id);
   }
 
+  // ---- opérations sur les lignes (menu, clavier, glisser-déposer) ----
+
+  function indexOfLine(id) {
+    var lines = getSheet().lines;
+    for (var i = 0; i < lines.length; i++) if (lines[i].id === id) return i;
+    return -1;
+  }
+
+  // Insère une ligne vide à `index`, la sélectionne et ouvre sa saisie.
+  function insertLineAt(index) {
+    var line = FE.Model.createDefaultLine("");
+    getSheet().lines.splice(index, 0, line);
+    onChange();
+    select(line.id);
+    startEdit("line", line.id);
+  }
+
+  function duplicateLine(id) {
+    var i = indexOfLine(id);
+    if (i < 0) return;
+    var copy = JSON.parse(JSON.stringify(getSheet().lines[i]));
+    copy.id = FE.Model.uuid();
+    getSheet().lines.splice(i + 1, 0, copy);
+    onChange();
+    select(copy.id);
+  }
+
+  // ---- outils au survol : « + » (insérer dessous) et poignée ⠿ ----
+  // Poignée : glisser = déplacer le bloc ; simple clic = menu du bloc.
+
+  function positionTools() {
+    if (!hoverId || drag && drag.moved) { if (!drag) toolsEl.hidden = true; return; }
+    var blocks = blocksOf(hoverId);
+    if (!blocks.length) { toolsEl.hidden = true; return; }
+    var r = relRect(blocks[0]);
+    toolsEl.hidden = false;
+    toolsEl.style.left = (r.left - toolsEl.offsetWidth - 8) + "px";
+    toolsEl.style.top = (r.top + 2) + "px";
+  }
+
+  function setHover(id) {
+    clearTimeout(hoverTimer);
+    if (drag) return;
+    if (id !== hoverId) { hoverId = id; closeMenu(); }
+    positionTools();
+  }
+
+  function scheduleHoverEnd() {
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(function () {
+      if (drag || menuEl && !menuEl.hidden) return;
+      hoverId = null;
+      toolsEl.hidden = true;
+    }, 220);
+  }
+
+  // La barre de réglages est masquée pendant un glissement et tant que le menu
+  // est ouvert : elle recouvrirait le trait d'insertion / le menu.
+  function setBarObscured(hidden) {
+    barEl.style.visibility = hidden ? "hidden" : "";
+  }
+
+  function closeMenu() {
+    if (menuEl) menuEl.hidden = true;
+    if (!drag) setBarObscured(false);
+  }
+
+  function openMenu(id) {
+    select(id);
+    var i = indexOfLine(id);
+    if (i < 0) return;
+    menuEl.innerHTML = "";
+    [["Insérer une ligne au-dessus", function () { insertLineAt(i); }],
+     ["Insérer une ligne en dessous", function () { insertLineAt(i + 1); }],
+     ["Dupliquer", function () { duplicateLine(id); }],
+     ["Supprimer", function () { deleteLine(findLine(id)); }, true]].forEach(function (item) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = item[0];
+      if (item[2]) b.className = "danger";
+      b.addEventListener("click", function () { closeMenu(); item[1](); });
+      menuEl.appendChild(b);
+    });
+    var h = relRect(toolsEl.querySelector(".block-handle"));
+    setBarObscured(true);
+    menuEl.hidden = false;
+    menuEl.style.left = h.left + "px";
+    menuEl.style.top = (h.top + h.height + 6) + "px";
+  }
+
+  // ---- glisser-déposer ----
+
+  // Où insérer si on lâche à la hauteur `y` (coordonnées écran) ? Renvoie
+  // { index, top, left, width } : index dans la liste SANS la ligne déplacée,
+  // et la position du trait d'insertion (coordonnées de la couche).
+  function dropTarget(y, draggedId) {
+    var lines = getSheet().lines.filter(function (l) { return l.id !== draggedId; });
+    if (!lines.length) return null;
+    var spans = lines.map(function (l) {
+      var blocks = blocksOf(l.id);
+      if (!blocks.length) return null;
+      var first = blocks[0].getBoundingClientRect();
+      var last = blocks[blocks.length - 1].getBoundingClientRect();
+      return { first: blocks[0], top: first.top, bottom: last.bottom };
+    });
+    for (var i = 0; i < lines.length; i++) {
+      if (!spans[i]) continue;
+      if (y < (spans[i].top + spans[i].bottom) / 2) {
+        var r = relRect(spans[i].first);
+        return { index: i, top: r.top - 3, left: r.left, width: r.width };
+      }
+    }
+    for (var k = lines.length - 1; k >= 0; k--) {
+      if (!spans[k]) continue;
+      var blocks = blocksOf(lines[k].id);
+      var lr = relRect(blocks[blocks.length - 1]);
+      return { index: lines.length, top: lr.top + lr.height + 3, left: lr.left, width: lr.width };
+    }
+    return null;
+  }
+
+  // Met à jour la cible d'insertion et le trait qui la montre.
+  function updateDropIndicator() {
+    var t = dropTarget(drag.y, drag.id);
+    drag.target = t;
+    if (t) {
+      dropEl.hidden = false;
+      dropEl.style.left = t.left + "px";
+      dropEl.style.top = t.top + "px";
+      dropEl.style.width = t.width + "px";
+    } else {
+      dropEl.hidden = true;
+    }
+  }
+
+  // Boucle d'animation : défilement automatique près des bords de la fenêtre
+  // (le trait d'insertion se recale à chaque image, la page ayant bougé).
+  function dragTick() {
+    if (!drag) return;
+    if (drag.moved) {
+      if (drag.y < 70) window.scrollBy(0, -16);
+      else if (drag.y > window.innerHeight - 70) window.scrollBy(0, 16);
+      updateDropIndicator();
+    }
+    drag.raf = requestAnimationFrame(dragTick);
+  }
+
+  function endDrag(commit) {
+    if (!drag) return;
+    var d = drag;
+    drag = null;
+    cancelAnimationFrame(d.raf);
+    dropEl.hidden = true;
+    setBarObscured(false);
+    document.body.classList.remove("is-dragging-block");
+    blocksOf(d.id).forEach(function (b) { b.classList.remove("is-dragging"); });
+    if (!d.moved) {
+      if (commit) openMenu(d.id); // simple clic sur la poignée
+      return;
+    }
+    if (commit) d.target = dropTarget(d.y, d.id);
+    if (commit && d.target) {
+      var lines = getSheet().lines;
+      var from = indexOfLine(d.id);
+      var line = lines.splice(from, 1)[0];
+      lines.splice(d.target.index, 0, line);
+      if (from !== d.target.index) onChange();
+    }
+    hoverId = null;
+    toolsEl.hidden = true;
+  }
+
+  function onHandleDown(e) {
+    if (e.button !== 0 || !hoverId) return;
+    e.preventDefault();
+    var handle = e.currentTarget;
+    try { handle.setPointerCapture(e.pointerId); } catch (err) { /* pointeur synthétique */ }
+    drag = { id: hoverId, x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, moved: false, target: null, raf: 0 };
+    select(drag.id);
+    drag.raf = requestAnimationFrame(dragTick);
+  }
+
+  function onHandleMove(e) {
+    if (!drag) return;
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+    if (!drag.moved && Math.hypot(drag.x - drag.startX, drag.y - drag.startY) > 4) {
+      drag.moved = true;
+      closeMenu();
+      setBarObscured(true);
+      document.body.classList.add("is-dragging-block");
+      blocksOf(drag.id).forEach(function (b) { b.classList.add("is-dragging"); });
+    }
+    if (drag.moved) updateDropIndicator();
+  }
+
   // ---- événements ----
 
   function onMouseDown(e) {
@@ -418,10 +609,18 @@ FE.PreviewEditor = (function () {
     var tag = e.target && e.target.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
     if (e.target && e.target.closest && e.target.closest(".inline-editor")) return;
+    if (e.key === "Escape" && drag) { endDrag(false); return; }
+    if (e.key === "Escape" && menuEl && !menuEl.hidden) { closeMenu(); return; }
     if (e.key === "Escape" && selectedLineId) select(null);
     else if (e.key === "Enter" && selectedLineId && !editing) {
       e.preventDefault();
       startEdit("line", selectedLineId);
+    } else if (e.key === "Delete" && selectedLineId && !editing) {
+      e.preventDefault();
+      deleteLine(findLine(selectedLineId));
+    } else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && selectedLineId && !editing) {
+      e.preventDefault();
+      moveLine(findLine(selectedLineId), e.key === "ArrowUp" ? -1 : 1);
     }
   }
 
@@ -446,6 +645,58 @@ FE.PreviewEditor = (function () {
       barPointerDown = false;
       positionBar();
     });
+
+    toolsEl = document.createElement("div");
+    toolsEl.className = "block-tools";
+    toolsEl.hidden = true;
+    var plus = document.createElement("button");
+    plus.type = "button";
+    plus.className = "block-plus";
+    plus.textContent = "+";
+    plus.title = "Ajouter une ligne en dessous";
+    plus.setAttribute("aria-label", "Ajouter une ligne en dessous");
+    plus.addEventListener("click", function () {
+      var i = indexOfLine(hoverId);
+      if (i >= 0) insertLineAt(i + 1);
+    });
+    var handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "block-handle";
+    handle.textContent = "⠿";
+    handle.title = "Glisser pour déplacer · clic pour le menu";
+    handle.setAttribute("aria-label", "Déplacer ou ouvrir le menu du bloc");
+    handle.addEventListener("pointerdown", onHandleDown);
+    handle.addEventListener("pointermove", onHandleMove);
+    handle.addEventListener("pointerup", function () { endDrag(true); });
+    handle.addEventListener("pointercancel", function () { endDrag(false); });
+    toolsEl.appendChild(plus);
+    toolsEl.appendChild(handle);
+    toolsEl.addEventListener("mouseenter", function () { clearTimeout(hoverTimer); });
+    toolsEl.addEventListener("mouseleave", scheduleHoverEnd);
+    layerEl.appendChild(toolsEl);
+
+    menuEl = document.createElement("div");
+    menuEl.className = "block-menu";
+    menuEl.hidden = true;
+    layerEl.appendChild(menuEl);
+    // Un clic ailleurs referme le menu.
+    document.addEventListener("pointerdown", function (e) {
+      if (menuEl.hidden) return;
+      if (menuEl.contains(e.target) || toolsEl.contains(e.target)) return;
+      closeMenu();
+    }, true);
+
+    dropEl = document.createElement("div");
+    dropEl.className = "drop-indicator";
+    dropEl.hidden = true;
+    layerEl.appendChild(dropEl);
+
+    previewEl.addEventListener("mouseover", function (e) {
+      var block = e.target.closest ? e.target.closest(".fiche-bloc") : null;
+      if (block) setHover(block.getAttribute("data-line-id"));
+      else scheduleHoverEnd();
+    });
+    previewEl.addEventListener("mouseleave", scheduleHoverEnd);
 
     previewEl.addEventListener("mousedown", onMouseDown);
     previewEl.addEventListener("click", onClick);

@@ -112,10 +112,10 @@ par l'utilisateur et annulée.
 ### Refonte « édition sur l'aperçu » — branche `edition-sur-apercu` (plan : `~/.claude/plans/pasted-content-id-6291-q2-velvet-pearl.md`)
 
 Objectif : éditer directement sur l'aperçu façon Notion. 4 étapes, un commit
-chacune, `main` intact jusqu'à validation. **Étapes 1 et 2 faites** (blocs, pages
+chacune, `main` intact jusqu'à validation. **Étapes 1, 2 et 3 faites** (blocs, pages
 multiples, sélection ; édition sur place, barre flottante, panneau gauche
-réduit). À faire : 3 glisser-déposer + ajout/suppression au survol, 4
-annuler/rétablir + brouillon auto.
+réduit ; glisser-déposer, ajout/suppression). À faire : 4 annuler/rétablir +
+brouillon auto.
 
 - `renderSheet` produit `.fiche-pages` > N `.fiche-page` (210×297mm fixes) >
   `.fiche-bloc[data-line-id]` > `.ligne-ecriture`. Titre + consigne en page 1
@@ -154,6 +154,24 @@ annuler/rétablir + brouillon auto.
     l'édition sur `click` si le bloc était déjà sélectionné au `mousedown`.
   - `renderSheet(sheet, previewEl, opts)` : `opts.forceConsigne` (via
     `FE.PreviewEditor.renderOptions()`).
+- **Étape 3** (tout dans `preview-editor.js`, styles en fin de `css/editor.css`) :
+  - Survol d'un bloc → `.block-tools` à gauche : « + » (insère dessous) et
+    poignée ⠿. Poignée : glisser = déplacer (pointer events, capture sur la
+    poignée) ; simple clic (< 4 px) = `.block-menu` (insérer au-dessus /
+    dessous, dupliquer, supprimer). Clavier : Suppr supprime le bloc
+    sélectionné, Alt+↑/↓ le déplace, Échap annule un glissement / ferme le menu.
+  - Glissement : `dropTarget(y, id)` (liste SANS le bloc déplacé, coupe au
+    milieu de l'empreinte verticale de chaque ligne, blocs coupés entre deux
+    pages inclus) → trait `.drop-indicator` ; la cible est recalculée à chaque
+    mouvement ET au relâchement (la boucle `requestAnimationFrame` ne sert
+    qu'au défilement automatique près des bords). Piège : `endDrag` remet
+    `drag = null` avant de recalculer → passer l'id en paramètre.
+  - La barre de réglages est masquée (`setBarObscured`) pendant un glissement
+    et tant que le menu est ouvert. Les ↑ ↓ ✕ de la barre ont été retirés.
+  - Blocs vides : invite « Écrivez un mot… » (`.fiche-bloc-placeholder`,
+    `no-print`, hors flux).
+  - Test headless : requêter le DOM au moment de l'action (un rendu après
+    chargement des polices remplace tout, les références sont périmées).
 
 ### Retour à la ligne et nombre de lignes (2026-09-21, non commité)
 

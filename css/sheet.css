@@ -144,3 +144,14 @@
   color: #4f6df5;
   border-color: #4f6df5;
 }
+
+.fiche-bloc-placeholder {
+  position: absolute;
+  left: 0;
+  transform: translateY(-85%);
+  font-family: system-ui, sans-serif;
+  font-size: 4.5mm;
+  font-style: italic;
+  color: #9aa2ad;
+  pointer-events: none;
+}

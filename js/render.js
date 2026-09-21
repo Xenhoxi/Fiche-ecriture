@@ -150,6 +150,14 @@ FE.Render = (function () {
     block.className = "fiche-bloc";
     block.setAttribute("data-line-id", item.line.id);
     page.appendChild(block);
+    // Bloc encore vide : invite « Écrivez un mot… » (écran seulement, hors flux).
+    if (!item.line.text.trim() && rows[0] === item.rows[0]) {
+      var hint = document.createElement("span");
+      hint.className = "fiche-bloc-placeholder no-print";
+      hint.textContent = "Écrivez un mot…";
+      hint.style.top = item.metrics.baselineY + "mm";
+      block.appendChild(hint);
+    }
     rows.forEach(function (r) {
       var row = document.createElement("div");
       row.className = "ligne-ecriture";

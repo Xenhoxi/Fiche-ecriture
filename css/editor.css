@@ -154,9 +154,12 @@
   margin-top: 16px;
 }
 
-/* La couche ne capte pas la souris, sauf la barre et le champ de saisie. */
+/* La couche ne capte pas la souris, sauf la barre, le champ de saisie, les
+   outils de survol et le menu. */
 #selection-layer .floating-bar,
-#selection-layer .inline-editor {
+#selection-layer .inline-editor,
+#selection-layer .block-tools,
+#selection-layer .block-menu {
   pointer-events: auto;
 }
 
@@ -295,5 +298,102 @@
   .fiche-consigne:hover {
     outline: 1.5px dashed var(--color-border-strong);
     outline-offset: 1mm;
+  }
+}
+
+/* ---- Outils de bloc : « + », poignée, menu, glisser-déposer ---- */
+
+.block-tools {
+  position: absolute;
+  z-index: 8;
+  display: flex;
+  gap: 4px;
+}
+
+.block-tools[hidden],
+.block-menu[hidden],
+.drop-indicator[hidden] {
+  display: none;
+}
+
+.block-tools button {
+  width: 22px;
+  height: 26px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--color-muted);
+  background: var(--color-panel);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  box-shadow: var(--shadow-card);
+}
+
+.block-tools button:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.block-handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.block-menu {
+  position: absolute;
+  z-index: 12;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(20, 24, 33, 0.18);
+}
+
+.block-menu button {
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+.block-menu button:hover {
+  background: var(--color-accent-soft);
+}
+
+.block-menu button.danger {
+  color: var(--color-danger);
+}
+
+.block-menu button.danger:hover {
+  background: var(--color-danger-soft);
+}
+
+.drop-indicator {
+  position: absolute;
+  z-index: 9;
+  height: 3px;
+  margin-top: -1px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(79, 109, 245, 0.25);
+  pointer-events: none;
+}
+
+.is-dragging-block,
+.is-dragging-block * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+@media screen {
+  .fiche-bloc.is-dragging {
+    opacity: 0.35;
   }
 }
