@@ -6,13 +6,15 @@ window.FE = window.FE || {};
   document.addEventListener("DOMContentLoaded", function () {
     var previewEl = document.getElementById("fiche-preview");
 
+    // Au démarrage, on reprend le brouillon de la session précédente s'il y en a un.
+    var draft = FE.Storage.loadDraft();
     var appState = {
-      sheet: FE.Model.createDefaultSheet()
+      sheet: draft ? FE.Model.validateSheet(draft) : FE.Model.createDefaultSheet()
     };
 
     // Mise à l'échelle responsive : la fiche est dimensionnée en mm
     // physiques (210mm de large) et déborderait sur un petit écran. On la
-    // réduit visuellement via transform: scale() sur .fiche-page, tout en
+    // réduit visuellement via transform: scale() sur .fiche-pages, tout en
     // réservant sur #fiche-preview exactement l'empreinte réduite (sinon
     // le transform, purement visuel, laisserait un vide en dessous/à droite
     // correspondant à la taille non réduite). Se fait APRÈS la mesure du
@@ -20,8 +22,8 @@ window.FE = window.FE || {};
     // sur la mise en page interne de la fiche ni sur l'impression (voir
     // print.css qui réinitialise ce transform).
     function updatePreviewScale() {
-      var page = previewEl.querySelector(".fiche-page");
-      var wrapper = previewEl.parentElement;
+      var page = previewEl.querySelector(".fiche-pages");
+      var wrapper = previewEl.closest(".preview-wrapper");
       if (!page || !wrapper) return;
 
       page.style.transform = "";
@@ -41,8 +43,9 @@ window.FE = window.FE || {};
     }
 
     function rerenderPreview(sheet) {
-      FE.Render.renderSheet(sheet, previewEl);
+      FE.Render.renderSheet(sheet, previewEl, FE.PreviewEditor.renderOptions());
       updatePreviewScale();
+      FE.PreviewEditor.refresh();
       reloadIfFontsPending(sheet);
     }
 
@@ -62,13 +65,35 @@ window.FE = window.FE || {};
         return document.fonts.load("16px '" + FE.Fonts.getById(id).family + "'");
       })).then(function () {
         if (appState.sheet === sheet) {
-          FE.Render.renderSheet(sheet, previewEl);
+          FE.Render.renderSheet(sheet, previewEl, FE.PreviewEditor.renderOptions());
           updatePreviewScale();
+          FE.PreviewEditor.refresh();
         }
       }).catch(function () {});
     }
 
+    FE.PreviewEditor.init(previewEl, document.getElementById("selection-layer"), function () { return appState.sheet; }, function (key) {
+      rerenderPreview(appState.sheet);
+      FE.History.commit(key);
+    }, function () {
+      // Rendu en direct pendant la saisie du titre / de la consigne : pas de pas d'annulation.
+      rerenderPreview(appState.sheet);
+    });
     FE.UI.init(appState, rerenderPreview);
+
+    // Annuler / rétablir : on remplace la fiche par l'instantané puis on
+    // reconstruit le panneau et l'aperçu (la sélection est conservée si la
+    // ligne existe encore).
+    FE.History.init({
+      getSheet: function () { return appState.sheet; },
+      applySheet: function (sheet) {
+        FE.PreviewEditor.cancelEdit();
+        appState.sheet = FE.Model.validateSheet(sheet);
+        FE.UI.reload();
+      }
+    });
+    FE.History.reset();
+    FE.UI.bindHistory();
 
     // Les polices embarquées (@font-face) se chargent de façon asynchrone.
     // Si le premier rendu a eu lieu avant leur chargement, la mesure du
@@ -84,7 +109,10 @@ window.FE = window.FE || {};
     var resizeTimer = null;
     window.addEventListener("resize", function () {
       if (resizeTimer) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(updatePreviewScale, 120);
+      resizeTimer = setTimeout(function () {
+        updatePreviewScale();
+        FE.PreviewEditor.refresh();
+      }, 120);
     });
   });
 })();

@@ -10,7 +10,31 @@
 
 .sidebar h1 {
   font-size: 18px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+}
+
+.history-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.history-bar button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.draft-status {
+  flex: 1 0 100%;
+  font-size: 11px;
+  color: var(--color-muted);
+  min-height: 14px;
+}
+
+.draft-status.is-error {
+  color: var(--color-danger);
 }
 
 .sidebar section {
@@ -33,91 +57,6 @@
   color: var(--color-muted);
   font-weight: 700;
   margin-bottom: 14px;
-}
-
-/* ---- Lignes ---- */
-
-.line-item {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 10px;
-  margin-bottom: 8px;
-  background: #fafbfd;
-  transition: border-color 0.15s ease;
-}
-
-.line-item.expanded {
-  border-color: var(--color-border-strong);
-}
-
-.line-item-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.line-item-head input[type="text"] {
-  flex: 1;
-}
-
-.line-item-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.line-item-settings-btn {
-  font-size: 13px;
-  line-height: 1;
-  padding: 5px 8px;
-}
-
-.line-item.expanded .line-item-settings-btn {
-  background: var(--color-accent-soft);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-/* Ouverture/fermeture animée en douceur sans display:none binaire :
-   grid-template-rows 0fr -> 1fr anime la hauteur d'un contenu de hauteur
-   variable sans avoir à la connaître à l'avance. */
-.line-item-overrides-wrap {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.22s ease;
-}
-
-.line-item.expanded .line-item-overrides-wrap {
-  grid-template-rows: 1fr;
-}
-
-.line-item-overrides-inner {
-  overflow: hidden;
-}
-
-.line-item-overrides-content {
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--color-border);
-}
-
-.line-item-reset {
-  margin-top: 4px;
-  color: var(--color-muted);
-  border-color: transparent;
-  background: none;
-  padding-left: 2px;
-}
-
-.line-item-reset:hover {
-  background: none;
-  color: var(--color-accent);
-  text-decoration: underline;
-}
-
-.add-line-btn {
-  width: 100%;
-  margin-top: 4px;
 }
 
 /* ---- Fiches sauvegardées ---- */
@@ -186,6 +125,35 @@
   overflow: auto;
 }
 
+/* Cadre qui porte l'aperçu et la couche de sélection (superposée, hors des
+   pages : jamais imprimée, sans effet sur la mise en page de la fiche). */
+.preview-stage {
+  position: relative;
+}
+
+#selection-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.selection-box {
+  position: absolute;
+  border: 2px solid var(--color-accent);
+  border-radius: 4px;
+  background: rgba(79, 109, 245, 0.06);
+}
+
+@media screen {
+  .fiche-bloc {
+    cursor: pointer;
+  }
+  .fiche-bloc:hover {
+    outline: 1.5px dashed var(--color-border-strong);
+    outline-offset: 1mm;
+  }
+}
+
 @media (max-width: 900px) {
   .app-layout {
     flex-direction: column;
@@ -199,5 +167,304 @@
   }
   .main-area {
     padding: 20px 16px;
+  }
+}
+
+/* ---- Édition sur l'aperçu ---- */
+
+/* « + Ajouter une ligne » : posé par FE.PreviewEditor juste sous le dernier
+   bloc (sur la page où il se trouve), à la largeur du contenu. */
+.add-line-row {
+  position: absolute;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+.add-line-row button {
+  width: 100%;
+  color: var(--color-muted);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1.5px dashed var(--color-border-strong);
+}
+
+.add-line-row button:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+/* La couche ne capte pas la souris, sauf la barre, le champ de saisie, les
+   outils de survol et le menu. */
+#selection-layer .floating-bar,
+#selection-layer .inline-editor,
+#selection-layer .block-tools,
+#selection-layer .block-menu {
+  pointer-events: auto;
+}
+
+.inline-editor {
+  position: absolute;
+  z-index: 5;
+  border: 2px solid var(--color-accent);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.55);
+  color: #1a1a1a;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(79, 109, 245, 0.18);
+  margin: 0;
+  white-space: pre;
+  overflow: visible;
+  cursor: text;
+}
+
+.inline-editor.is-multiline {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.inline-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #9aa2ad;
+  font-style: italic;
+}
+
+.floating-bar {
+  position: absolute;
+  z-index: 10;
+  width: 380px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(20, 24, 33, 0.18);
+  padding: 10px 12px 8px;
+}
+
+.floating-bar[hidden] {
+  display: none;
+}
+
+.floating-bar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.floating-bar-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.floating-bar-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.floating-bar-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 14px;
+}
+
+/* Police, pointillés doubles et italique prennent toute la largeur. */
+.floating-bar-fields > [data-setting="fontId"],
+.floating-bar-fields > [data-setting="dotStyle"],
+.floating-bar-fields > [data-setting="fontStyle"] {
+  grid-column: 1 / -1;
+}
+
+.floating-bar-fields > * {
+  min-width: 0;
+}
+
+.floating-bar .slider-row {
+  gap: 8px;
+}
+
+.floating-bar .slider-row input[type="range"] {
+  min-width: 0;
+  width: 100%;
+}
+
+.floating-bar .slider-output {
+  flex: none;
+  min-width: 34px;
+  text-align: right;
+}
+
+.floating-bar-fields > [hidden] {
+  display: none;
+}
+
+/* Réglage propre à ce bloc (différent des réglages globaux) : petit point. */
+.floating-bar-fields .is-custom > label::after,
+.floating-bar-fields .toggle-field.is-custom .toggle-label-text::after {
+  content: " •";
+  color: var(--color-accent);
+}
+
+.floating-bar-reset {
+  margin-top: 4px;
+  color: var(--color-muted);
+  border-color: transparent;
+  background: none;
+  padding-left: 2px;
+}
+
+.floating-bar-reset:hover {
+  background: none;
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+@media screen {
+  /* Titre / consigne en cours de saisie : l'ancien texte est masqué (le champ
+     de saisie montre seul ce qu'on tape). La place reste réservée. */
+  .fiche-name-heading.is-editing {
+    color: transparent;
+  }
+  .fiche-name-heading.is-editing .add-consigne-hint {
+    visibility: hidden;
+  }
+  .fiche-consigne.is-editing .fiche-consigne-text {
+    visibility: hidden;
+  }
+  .fiche-bloc {
+    user-select: none;
+  }
+  /* Pendant la saisie sur place, TOUT l'ancien texte du bloc (modèle et
+     répétitions, en plein, contour ou trait central pointillé) est masqué :
+     il ne reste que la réglure, et le champ de saisie (transparent, mêmes
+     police et position) montre seul ce qu'on tape. */
+  .fiche-bloc.is-editing .ligne-ecriture text,
+  .fiche-bloc.is-editing .ligne-ecriture path {
+    visibility: hidden;
+  }
+  .fiche-name-heading,
+  .fiche-consigne {
+    cursor: text;
+  }
+  .fiche-name-heading:hover,
+  .fiche-consigne:hover {
+    outline: 1.5px dashed var(--color-border-strong);
+    outline-offset: 1mm;
+  }
+}
+
+/* ---- Outils de bloc : « + », poignée, menu, glisser-déposer ---- */
+
+.block-tools {
+  position: absolute;
+  z-index: 8;
+  /* 2 colonnes × 2 rangées : « + » et poignée, puis dupliquer et supprimer. */
+  display: grid;
+  grid-template-columns: 22px 22px;
+  gap: 4px;
+}
+
+.block-tools[hidden],
+.block-menu[hidden],
+.drop-indicator[hidden] {
+  display: none;
+}
+
+.block-tools button {
+  width: 22px;
+  height: 26px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--color-muted);
+  background: var(--color-panel);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  box-shadow: var(--shadow-card);
+}
+
+.block-tools button:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.block-tools button.block-delete {
+  color: var(--color-danger);
+  border-color: var(--color-danger-soft);
+}
+
+.block-tools button.block-delete:hover {
+  color: #fff;
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.block-tools button svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.block-handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.block-menu {
+  position: absolute;
+  z-index: 12;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(20, 24, 33, 0.18);
+}
+
+.block-menu button {
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+.block-menu button:hover {
+  background: var(--color-accent-soft);
+}
+
+.block-menu button.danger {
+  color: var(--color-danger);
+}
+
+.block-menu button.danger:hover {
+  background: var(--color-danger-soft);
+}
+
+.drop-indicator {
+  position: absolute;
+  z-index: 9;
+  height: 3px;
+  margin-top: -1px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(79, 109, 245, 0.25);
+  pointer-events: none;
+}
+
+.is-dragging-block,
+.is-dragging-block * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+@media screen {
+  .fiche-bloc.is-dragging {
+    opacity: 0.35;
   }
 }

@@ -4,6 +4,7 @@ FE.Storage = (function () {
   "use strict";
 
   var KEY = "ficheEcriture:v1:sheets";
+  var DRAFT_KEY = "ficheEcriture:v1:draft";
 
   function readAll() {
     var raw = null;
@@ -79,7 +80,31 @@ FE.Storage = (function () {
     return saveSheet(copy);
   }
 
+  // Brouillon : la fiche en cours d'édition, distincte des fiches nommées.
+  function saveDraft(sheet) {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(sheet));
+      return true;
+    } catch (e) {
+      console.error("Échec de la sauvegarde du brouillon :", e);
+      return false;
+    }
+  }
+
+  function loadDraft() {
+    try {
+      var raw = localStorage.getItem(DRAFT_KEY);
+      var parsed = raw ? JSON.parse(raw) : null;
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch (e) {
+      console.warn("Brouillon illisible, ignoré.", e);
+      return null;
+    }
+  }
+
   return {
+    saveDraft: saveDraft,
+    loadDraft: loadDraft,
     listSheets: listSheets,
     getSheet: getSheet,
     saveSheet: saveSheet,
