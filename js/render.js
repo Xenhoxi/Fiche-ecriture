@@ -58,9 +58,11 @@ FE.Render = (function () {
     };
   }
 
-  function buildConsigneBlock(sheet) {
+  // `force` : affiche la zone même vide (pendant la saisie d'une nouvelle
+  // consigne sur l'aperçu), avec un texte d'invite invisible à l'impression.
+  function buildConsigneBlock(sheet, force) {
     var text = (sheet.consigne || "").trim();
-    if (!text) return null;
+    if (!text && !force) return null;
     var wrap = document.createElement("div");
     wrap.className = "fiche-consigne";
     var title = document.createElement("p");
@@ -68,18 +70,22 @@ FE.Render = (function () {
     title.textContent = "Consigne";
     var body = document.createElement("p");
     body.className = "fiche-consigne-text";
-    body.textContent = text;
+    body.textContent = text || "Écrivez la consigne…";
+    if (!text) wrap.classList.add("is-empty");
     wrap.appendChild(title);
     wrap.appendChild(body);
     return wrap;
   }
 
+  // Le titre est toujours présent (même vide : invite « Titre de la fiche »,
+  // invisible à l'impression mais qui garde sa place) pour pouvoir le
+  // modifier directement sur l'aperçu.
   function buildNameHeading(sheet) {
     var name = (sheet.name || "").trim();
-    if (!name) return null;
     var h = document.createElement("h2");
     h.className = "fiche-name-heading";
-    h.textContent = name;
+    h.textContent = name || "Titre de la fiche";
+    if (!name) h.classList.add("is-empty");
     return h;
   }
 
@@ -157,7 +163,9 @@ FE.Render = (function () {
   // qu'en page 1. Un bloc (une ligne de la fiche et toutes ses rangées) n'est
   // jamais coupé : il passe entier à la page suivante s'il ne tient pas ; seul
   // un bloc plus grand qu'une page est coupé rangée par rangée.
-  function renderSheet(sheet, previewEl) {
+  // opts.forceConsigne : voir buildConsigneBlock.
+  function renderSheet(sheet, previewEl, opts) {
+    opts = opts || {};
     previewEl.innerHTML = "";
 
     var pagesEl = document.createElement("div");
@@ -167,15 +175,24 @@ FE.Render = (function () {
     var page = createPage(pagesEl);
 
     var heading = buildNameHeading(sheet);
-    if (heading) page.appendChild(heading);
+    if ((sheet.consigne || "").trim() === "" && !opts.forceConsigne) {
+      // Pas de consigne : petit lien pour en ajouter une (écran seulement,
+      // en position absolue : aucun impact sur la mise en page).
+      var hint = document.createElement("button");
+      hint.type = "button";
+      hint.className = "add-consigne-hint no-print";
+      hint.textContent = "+ Consigne";
+      heading.appendChild(hint);
+    }
+    page.appendChild(heading);
 
-    var consigne = buildConsigneBlock(sheet);
+    var consigne = buildConsigneBlock(sheet, opts.forceConsigne);
     if (consigne) page.appendChild(consigne);
 
     if (!sheet.lines || sheet.lines.length === 0) {
       var empty = document.createElement("p");
       empty.className = "fiche-empty-hint";
-      empty.textContent = "Ajoutez des lignes dans le panneau de gauche pour commencer votre fiche.";
+      empty.textContent = "Cliquez sur « + Ajouter une ligne » ci-dessous pour commencer votre fiche.";
       page.appendChild(empty);
       return pagesEl;
     }

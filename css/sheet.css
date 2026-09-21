@@ -60,6 +60,7 @@
 }
 
 .fiche-name-heading {
+  position: relative;
   margin: 0 0 4mm 0;
   font-size: 4mm;
   font-weight: 700;
@@ -104,4 +105,42 @@
   font-size: 3.5mm;
   padding: 8mm 0;
   text-align: center;
+}
+
+/* Invites de saisie (titre ou consigne vides) : visibles à l'écran, elles
+   gardent leur place mais ne s'impriment pas. */
+.fiche-name-heading.is-empty,
+.fiche-consigne.is-empty .fiche-consigne-text {
+  color: #9aa2ad;
+  font-style: italic;
+  font-weight: 400;
+}
+
+@media print {
+  .fiche-name-heading.is-empty,
+  .fiche-consigne.is-empty {
+    visibility: hidden;
+  }
+}
+
+/* Petit lien « + Consigne » au bout du titre : hors flux, écran seulement. */
+.add-consigne-hint {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: system-ui, sans-serif;
+  font-size: 3mm;
+  font-weight: 500;
+  padding: 0.6mm 2.4mm;
+  color: #6b7280;
+  background: #fff;
+  border: 1px dashed #cbd1db;
+  border-radius: 3mm;
+  cursor: pointer;
+}
+
+.add-consigne-hint:hover {
+  color: #4f6df5;
+  border-color: #4f6df5;
 }

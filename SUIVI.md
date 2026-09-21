@@ -112,9 +112,9 @@ par l'utilisateur et annulée.
 ### Refonte « édition sur l'aperçu » — branche `edition-sur-apercu` (plan : `~/.claude/plans/pasted-content-id-6291-q2-velvet-pearl.md`)
 
 Objectif : éditer directement sur l'aperçu façon Notion. 4 étapes, un commit
-chacune, `main` intact jusqu'à validation. **Étape 1 faite** (blocs, pages
-multiples, sélection). À faire : 2 édition sur place + barre flottante (panneau
-gauche réduit), 3 glisser-déposer + ajout/suppression au survol, 4
+chacune, `main` intact jusqu'à validation. **Étapes 1 et 2 faites** (blocs, pages
+multiples, sélection ; édition sur place, barre flottante, panneau gauche
+réduit). À faire : 3 glisser-déposer + ajout/suppression au survol, 4
 annuler/rétablir + brouillon auto.
 
 - `renderSheet` produit `.fiche-pages` > N `.fiche-page` (210×297mm fixes) >
@@ -129,7 +129,31 @@ annuler/rétablir + brouillon auto.
 - `main.js` : la mise à l'échelle porte sur `.fiche-pages` (le conteneur de
   toutes les pages). Impression : `break-after: page`, testée par un vrai
   `--print-to-pdf` Chrome (pas seulement la simulation CSS).
-- Le panneau gauche est encore complet (réduit à l'étape 2).
+- **Étape 2** : panneau gauche réduit (réglages globaux, fiches sauvegardées,
+  impression) ; nom/consigne/lignes s'éditent sur l'aperçu.
+  - Second clic (ou Entrée) sur un bloc sélectionné → `div contenteditable`
+    superposé au mot modèle (texte brut). Entrée valide, Échap annule, changer
+    de bloc / cliquer ailleurs enregistre. Titre et consigne : clic direct ;
+    lien « + Consigne » (écran seulement) quand elle est vide ; consigne
+    multiligne : Ctrl+Entrée valide. Le mot modèle SVG est masqué pendant la
+    saisie (`.is-editing`), le champ est semi-transparent (réglure visible).
+  - **Ne pas utiliser `<input>`/`<textarea>`** : Chrome rogne leur texte à la
+    zone de contenu (jambages coupés). La ligne de base du champ est calée par
+    `canvasMetrics()` + `line-height` (demi-interligne) dans `editorGeometry()`.
+  - Barre flottante (`.floating-bar`, sous le bloc) : réutilise
+    `FE.UI.buildSettingsFields` (`data-setting` sur chaque champ) ; un « • »
+    marque les réglages propres au bloc ; ↑ ↓ ✕ (déplacement/suppression, à
+    remplacer par le glisser-déposer à l'étape 3). Elle n'est PAS reconstruite
+    à chaque rendu (un curseur tenu serait détruit) : `syncBar()` la
+    resynchronise après un changement de réglages globaux ; elle ne bouge pas
+    tant qu'un curseur est tenu (`barPointerDown`).
+  - « + Ajouter une ligne » est maintenant sous l'aperçu (`#btn-add-line`).
+  - Piège : le keydown Entrée d'un champ doit `stopPropagation()`, sinon le
+    gestionnaire global (Entrée = éditer le bloc sélectionné) le rouvre.
+  - Sélection sur `mousedown` (avant le blur du champ en cours), démarrage de
+    l'édition sur `click` si le bloc était déjà sélectionné au `mousedown`.
+  - `renderSheet(sheet, previewEl, opts)` : `opts.forceConsigne` (via
+    `FE.PreviewEditor.renderOptions()`).
 
 ### Retour à la ligne et nombre de lignes (2026-09-21, non commité)
 

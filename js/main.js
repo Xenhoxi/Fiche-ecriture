@@ -41,7 +41,7 @@ window.FE = window.FE || {};
     }
 
     function rerenderPreview(sheet) {
-      FE.Render.renderSheet(sheet, previewEl);
+      FE.Render.renderSheet(sheet, previewEl, FE.PreviewEditor.renderOptions());
       updatePreviewScale();
       FE.PreviewEditor.refresh();
       reloadIfFontsPending(sheet);
@@ -63,14 +63,14 @@ window.FE = window.FE || {};
         return document.fonts.load("16px '" + FE.Fonts.getById(id).family + "'");
       })).then(function () {
         if (appState.sheet === sheet) {
-          FE.Render.renderSheet(sheet, previewEl);
+          FE.Render.renderSheet(sheet, previewEl, FE.PreviewEditor.renderOptions());
           updatePreviewScale();
           FE.PreviewEditor.refresh();
         }
       }).catch(function () {});
     }
 
-    FE.PreviewEditor.init(previewEl, document.getElementById("selection-layer"), function () { return appState.sheet; });
+    FE.PreviewEditor.init(previewEl, document.getElementById("selection-layer"), function () { return appState.sheet; }, function () { rerenderPreview(appState.sheet); });
     FE.UI.init(appState, rerenderPreview);
 
     // Les polices embarquées (@font-face) se chargent de façon asynchrone.

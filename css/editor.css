@@ -35,91 +35,6 @@
   margin-bottom: 14px;
 }
 
-/* ---- Lignes ---- */
-
-.line-item {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 10px;
-  margin-bottom: 8px;
-  background: #fafbfd;
-  transition: border-color 0.15s ease;
-}
-
-.line-item.expanded {
-  border-color: var(--color-border-strong);
-}
-
-.line-item-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.line-item-head input[type="text"] {
-  flex: 1;
-}
-
-.line-item-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.line-item-settings-btn {
-  font-size: 13px;
-  line-height: 1;
-  padding: 5px 8px;
-}
-
-.line-item.expanded .line-item-settings-btn {
-  background: var(--color-accent-soft);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-/* Ouverture/fermeture animée en douceur sans display:none binaire :
-   grid-template-rows 0fr -> 1fr anime la hauteur d'un contenu de hauteur
-   variable sans avoir à la connaître à l'avance. */
-.line-item-overrides-wrap {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.22s ease;
-}
-
-.line-item.expanded .line-item-overrides-wrap {
-  grid-template-rows: 1fr;
-}
-
-.line-item-overrides-inner {
-  overflow: hidden;
-}
-
-.line-item-overrides-content {
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--color-border);
-}
-
-.line-item-reset {
-  margin-top: 4px;
-  color: var(--color-muted);
-  border-color: transparent;
-  background: none;
-  padding-left: 2px;
-}
-
-.line-item-reset:hover {
-  background: none;
-  color: var(--color-accent);
-  text-decoration: underline;
-}
-
-.add-line-btn {
-  width: 100%;
-  margin-top: 4px;
-}
-
 /* ---- Fiches sauvegardées ---- */
 
 .saved-sheet-item {
@@ -228,5 +143,157 @@
   }
   .main-area {
     padding: 20px 16px;
+  }
+}
+
+/* ---- Édition sur l'aperçu ---- */
+
+.add-line-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* La couche ne capte pas la souris, sauf la barre et le champ de saisie. */
+#selection-layer .floating-bar,
+#selection-layer .inline-editor {
+  pointer-events: auto;
+}
+
+.inline-editor {
+  position: absolute;
+  z-index: 5;
+  border: 2px solid var(--color-accent);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.55);
+  color: #1a1a1a;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(79, 109, 245, 0.18);
+  margin: 0;
+  white-space: pre;
+  overflow: visible;
+  cursor: text;
+}
+
+.inline-editor.is-multiline {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.inline-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #9aa2ad;
+  font-style: italic;
+}
+
+.floating-bar {
+  position: absolute;
+  z-index: 10;
+  width: 380px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(20, 24, 33, 0.18);
+  padding: 10px 12px 8px;
+}
+
+.floating-bar[hidden] {
+  display: none;
+}
+
+.floating-bar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.floating-bar-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.floating-bar-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.floating-bar-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 14px;
+}
+
+/* Police, pointillés doubles et italique prennent toute la largeur. */
+.floating-bar-fields > [data-setting="fontId"],
+.floating-bar-fields > [data-setting="dotStyle"],
+.floating-bar-fields > [data-setting="fontStyle"] {
+  grid-column: 1 / -1;
+}
+
+.floating-bar-fields > * {
+  min-width: 0;
+}
+
+.floating-bar .slider-row {
+  gap: 8px;
+}
+
+.floating-bar .slider-row input[type="range"] {
+  min-width: 0;
+  width: 100%;
+}
+
+.floating-bar .slider-output {
+  flex: none;
+  min-width: 34px;
+  text-align: right;
+}
+
+.floating-bar-fields > [hidden] {
+  display: none;
+}
+
+/* Réglage propre à ce bloc (différent des réglages globaux) : petit point. */
+.floating-bar-fields .is-custom > label::after,
+.floating-bar-fields .toggle-field.is-custom .toggle-label-text::after {
+  content: " •";
+  color: var(--color-accent);
+}
+
+.floating-bar-reset {
+  margin-top: 4px;
+  color: var(--color-muted);
+  border-color: transparent;
+  background: none;
+  padding-left: 2px;
+}
+
+.floating-bar-reset:hover {
+  background: none;
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+@media screen {
+  .fiche-bloc {
+    user-select: none;
+  }
+  /* Pendant la saisie sur place, le mot modèle est masqué : c'est le champ de
+     saisie (transparent, mêmes police et position) qui le remplace. */
+  .fiche-bloc.is-editing .ligne-ecriture:first-child text:first-of-type {
+    visibility: hidden;
+  }
+  .fiche-name-heading,
+  .fiche-consigne {
+    cursor: text;
+  }
+  .fiche-name-heading:hover,
+  .fiche-consigne:hover {
+    outline: 1.5px dashed var(--color-border-strong);
+    outline-offset: 1mm;
   }
 }

@@ -13,11 +13,7 @@ FE.UI = (function () {
 
   function cacheDom() {
     dom = {
-      sheetName: qs("field-sheet-name"),
-      consigne: qs("field-consigne"),
       globalSettings: qs("global-settings"),
-      linesList: qs("lines-list"),
-      addLineBtn: qs("btn-add-line"),
       savedList: qs("saved-sheets-list"),
       saveBtn: qs("btn-save"),
       newBtn: qs("btn-new"),
@@ -109,27 +105,34 @@ FE.UI = (function () {
       if (italicField) italicField.hidden = !FE.Fonts.supportsItalic(fontSelect.value);
       onChange("fontId", fontSelect.value);
     });
+    fontField.dataset.setting = "fontId";
     fontField.appendChild(fontLabel);
     fontField.appendChild(fontSelect);
     container.appendChild(fontField);
 
-    container.appendChild(buildSliderField("Taille", {
+    function tagged(key, field) {
+      field.dataset.setting = key;
+      container.appendChild(field);
+      return field;
+    }
+
+    tagged("fontSizeMm", buildSliderField("Taille", {
       min: 4, max: 30, step: 0.5, value: values.fontSizeMm, unit: "mm"
     }, function (v) { onChange("fontSizeMm", v); }));
 
-    container.appendChild(buildSliderField("Répétitions", {
+    tagged("repetitions", buildSliderField("Répétitions", {
       min: 1, max: 20, step: 1, value: values.repetitions, unit: "×"
     }, function (v) { onChange("repetitions", v); }));
 
-    container.appendChild(buildSliderField("Nombre de lignes", {
+    tagged("lineCount", buildSliderField("Nombre de lignes", {
       min: 1, max: 10, step: 1, value: values.lineCount, unit: ""
     }, function (v) { onChange("lineCount", v); }));
 
-    container.appendChild(buildSliderField("Taille des pointillés", {
+    tagged("dashSizeMm", buildSliderField("Taille des pointillés", {
       min: 0.8, max: 5, step: 0.2, value: values.dashSizeMm, unit: "mm"
     }, function (v) { onChange("dashSizeMm", v); }));
 
-    container.appendChild(buildToggleField("Pointillés doubles (contour des lettres)", values.dotStyle === "double", function (checked) {
+    tagged("dotStyle", buildToggleField("Pointillés doubles (contour des lettres)", values.dotStyle === "double", function (checked) {
       onChange("dotStyle", checked ? "double" : "single");
     }));
 
@@ -137,180 +140,17 @@ FE.UI = (function () {
       onChange("fontStyle", checked ? "italic" : "normal");
     });
     italicField.hidden = !FE.Fonts.supportsItalic(values.fontId);
-    container.appendChild(italicField);
+    tagged("fontStyle", italicField);
   }
 
   // ---- Réglages globaux ----
 
   function refreshGlobalSettings() {
-    dom.sheetName.value = appState.sheet.name;
-    dom.consigne.value = appState.sheet.consigne;
     buildSettingsFields(dom.globalSettings, appState.sheet.settings, function (key, value) {
       appState.sheet.settings[key] = value;
       triggerUpdate();
-    });
-  }
-
-  function bindGlobalFields() {
-    dom.sheetName.addEventListener("input", function () {
-      appState.sheet.name = dom.sheetName.value;
-      triggerUpdate();
-    });
-    dom.consigne.addEventListener("input", function () {
-      appState.sheet.consigne = dom.consigne.value;
-      triggerUpdate();
-    });
-  }
-
-  // ---- Lignes ----
-
-  function buildOverridesPanel(line) {
-    var panel = document.createElement("div");
-    panel.className = "line-item-overrides-content";
-
-    var fieldsContainer = document.createElement("div");
-    panel.appendChild(fieldsContainer);
-
-    var resetBtn = document.createElement("button");
-    resetBtn.type = "button";
-    resetBtn.className = "small line-item-reset";
-    resetBtn.textContent = "↺ Revenir aux réglages globaux";
-
-    function updateResetVisibility() {
-      resetBtn.hidden = Object.keys(line.overrides).length === 0;
-    }
-
-    var resolved = FE.Model.resolveLineSettings(appState.sheet, line);
-    buildSettingsFields(fieldsContainer, resolved, function (key, value) {
-      line.overrides[key] = value;
-      updateResetVisibility();
-      triggerUpdate();
-    });
-
-    resetBtn.addEventListener("click", function () {
-      line.overrides = {};
-      refreshLines();
-      triggerUpdate();
-    });
-    updateResetVisibility();
-    panel.appendChild(resetBtn);
-
-    return panel;
-  }
-
-  function buildLineItem(line, index, total) {
-    var item = document.createElement("div");
-    item.className = "line-item";
-
-    var head = document.createElement("div");
-    head.className = "line-item-head";
-
-    var textInput = document.createElement("input");
-    textInput.type = "text";
-    textInput.value = line.text;
-    textInput.placeholder = "Mot ou phrase à écrire";
-    textInput.addEventListener("input", function () {
-      line.text = textInput.value;
-      triggerUpdate();
-    });
-
-    var actions = document.createElement("div");
-    actions.className = "line-item-actions";
-
-    var upBtn = document.createElement("button");
-    upBtn.className = "small";
-    upBtn.type = "button";
-    upBtn.textContent = "↑";
-    upBtn.title = "Monter";
-    upBtn.disabled = index === 0;
-    upBtn.addEventListener("click", function () { moveLine(index, -1); });
-
-    var downBtn = document.createElement("button");
-    downBtn.className = "small";
-    downBtn.type = "button";
-    downBtn.textContent = "↓";
-    downBtn.title = "Descendre";
-    downBtn.disabled = index === total - 1;
-    downBtn.addEventListener("click", function () { moveLine(index, 1); });
-
-    var delBtn = document.createElement("button");
-    delBtn.className = "small danger";
-    delBtn.type = "button";
-    delBtn.textContent = "✕";
-    delBtn.title = "Supprimer cette ligne";
-    delBtn.addEventListener("click", function () {
-      appState.sheet.lines.splice(index, 1);
-      refreshLines();
-      triggerUpdate();
-    });
-
-    var settingsBtn = document.createElement("button");
-    settingsBtn.className = "small line-item-settings-btn";
-    settingsBtn.type = "button";
-    settingsBtn.textContent = "⚙";
-    settingsBtn.title = "Personnaliser cette ligne";
-    settingsBtn.setAttribute("aria-label", "Personnaliser cette ligne");
-    settingsBtn.addEventListener("click", function () {
-      // Accordéon : ouvrir une ligne referme automatiquement les autres,
-      // pour ne pas avoir plusieurs panneaux ouverts à faire défiler.
-      var wasExpanded = item.classList.contains("expanded");
-      Array.prototype.forEach.call(dom.linesList.querySelectorAll(".line-item.expanded"), function (el) {
-        el.classList.remove("expanded");
-      });
-      if (!wasExpanded) item.classList.add("expanded");
-    });
-
-    actions.appendChild(settingsBtn);
-    actions.appendChild(upBtn);
-    actions.appendChild(downBtn);
-    actions.appendChild(delBtn);
-
-    head.appendChild(textInput);
-    head.appendChild(actions);
-
-    var overridesWrap = document.createElement("div");
-    overridesWrap.className = "line-item-overrides-wrap";
-    var overridesInner = document.createElement("div");
-    overridesInner.className = "line-item-overrides-inner";
-    overridesInner.appendChild(buildOverridesPanel(line));
-    overridesWrap.appendChild(overridesInner);
-
-    item.appendChild(head);
-    item.appendChild(overridesWrap);
-
-    return item;
-  }
-
-  function moveLine(index, delta) {
-    var lines = appState.sheet.lines;
-    var newIndex = index + delta;
-    if (newIndex < 0 || newIndex >= lines.length) return;
-    var tmp = lines[index];
-    lines[index] = lines[newIndex];
-    lines[newIndex] = tmp;
-    refreshLines();
-    triggerUpdate();
-  }
-
-  function refreshLines() {
-    dom.linesList.innerHTML = "";
-    var lines = appState.sheet.lines;
-    if (lines.length === 0) {
-      var empty = document.createElement("p");
-      empty.className = "empty-state";
-      empty.textContent = "Aucune ligne pour le moment.";
-      dom.linesList.appendChild(empty);
-    }
-    lines.forEach(function (line, index) {
-      dom.linesList.appendChild(buildLineItem(line, index, lines.length));
-    });
-  }
-
-  function bindAddLine() {
-    dom.addLineBtn.addEventListener("click", function () {
-      appState.sheet.lines.push(FE.Model.createDefaultLine(""));
-      refreshLines();
-      triggerUpdate();
+      // La barre de réglages d'un bloc affiche aussi les valeurs héritées.
+      FE.PreviewEditor.syncBar();
     });
   }
 
@@ -326,6 +166,7 @@ FE.UI = (function () {
     var sheet = FE.Storage.getSheet(id);
     if (!sheet) return;
     appState.sheet = FE.Model.validateSheet(sheet);
+    FE.PreviewEditor.select(null);
     refreshAll();
   }
 
@@ -401,6 +242,7 @@ FE.UI = (function () {
     dom.newBtn.addEventListener("click", function () {
       if (!window.confirm("Créer une nouvelle fiche ? Les modifications non sauvegardées de la fiche actuelle seront perdues.")) return;
       appState.sheet = FE.Model.createDefaultSheet();
+      FE.PreviewEditor.select(null);
       refreshAll();
     });
   }
@@ -417,21 +259,19 @@ FE.UI = (function () {
 
   function refreshAll() {
     refreshGlobalSettings();
-    refreshLines();
     triggerUpdate();
+    FE.PreviewEditor.syncBar();
   }
 
   function init(state, rerenderFn) {
     appState = state;
     rerenderPreview = rerenderFn;
     cacheDom();
-    bindGlobalFields();
-    bindAddLine();
     bindSaveNewButtons();
     bindPrintButton();
     refreshAll();
     refreshSavedList();
   }
 
-  return { init: init };
+  return { init: init, buildSettingsFields: buildSettingsFields };
 })();

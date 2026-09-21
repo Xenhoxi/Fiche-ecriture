@@ -1,17 +1,42 @@
 window.FE = window.FE || {};
 
-// Interaction directe avec l'aperçu de la fiche : sélection d'un bloc (une
-// ligne de la fiche) par clic. Le contour de sélection est dessiné dans une
-// couche superposée (#selection-layer), hors des pages, pour ne jamais être
-// imprimé ni perturber la mise en page. Le rendu reconstruit tout le DOM à
-// chaque changement : `refresh()` re-place donc le contour après chaque rendu.
+// Interaction directe avec l'aperçu de la fiche :
+//  - sélection d'un bloc (une ligne de la fiche) ;
+//  - édition du texte sur place (champ superposé au mot modèle), du titre et
+//    de la consigne ;
+//  - barre flottante de réglages du bloc sélectionné.
+//
+// Tout ce qui est superposé vit dans #selection-layer, hors des pages : jamais
+// imprimé, sans effet sur la mise en page. Le rendu reconstruit tout le DOM des
+// pages à chaque changement : `refresh()` re-place donc les cadres après chaque
+// rendu. La barre flottante, elle, n'est PAS reconstruite à chaque rendu (sinon
+// un curseur en cours de glissement serait détruit sous la souris).
 FE.PreviewEditor = (function () {
   "use strict";
 
+  var MM_TO_PX = 96 / 25.4;
+
   var previewEl = null;
   var layerEl = null;
+  var boxesEl = null;
+  var barEl = null;
   var getSheet = null;
+  var onChange = null;
+
   var selectedLineId = null;
+  var barLineId = null;      // ligne dont la barre affiche actuellement les réglages
+  var barPointerDown = false; // curseur en cours de manipulation dans la barre
+  var editing = null;        // { kind: "line"|"title"|"consigne", el, done }
+  var addingConsigne = false;
+  var wasSelectedOnDown = false;
+
+  // ---- utilitaires ----
+
+  function findLine(id) {
+    var lines = getSheet().lines;
+    for (var i = 0; i < lines.length; i++) if (lines[i].id === id) return lines[i];
+    return null;
+  }
 
   function blocksOf(lineId) {
     return Array.prototype.filter.call(previewEl.querySelectorAll(".fiche-bloc"), function (b) {
@@ -19,52 +44,423 @@ FE.PreviewEditor = (function () {
     });
   }
 
-  // Redessine le contour (un cadre par fragment : un bloc coupé entre deux
-  // pages en a deux). Position relative à la couche, donc valable même quand
-  // l'aperçu est réduit par transform: scale().
-  function refresh() {
-    layerEl.innerHTML = "";
-    if (!selectedLineId) return;
-    var exists = getSheet().lines.some(function (l) { return l.id === selectedLineId; });
-    if (!exists) { selectedLineId = null; return; }
+  // Rapport d'échelle de l'aperçu (transform: scale() quand la fenêtre est étroite).
+  function previewScale() {
+    var pages = previewEl.querySelector(".fiche-pages");
+    if (!pages || !pages.offsetWidth) return 1;
+    return pages.getBoundingClientRect().width / pages.offsetWidth;
+  }
 
-    var origin = layerEl.getBoundingClientRect();
+  function relRect(el) {
+    var o = layerEl.getBoundingClientRect();
+    var r = el.getBoundingClientRect();
+    return { left: r.left - o.left, top: r.top - o.top, width: r.width, height: r.height };
+  }
+
+  function renderOptions() {
+    return { forceConsigne: addingConsigne };
+  }
+
+  // ---- cadres de sélection + barre ----
+
+  function drawBoxes() {
+    boxesEl.innerHTML = "";
+    if (!selectedLineId) return;
+    // Un cadre par fragment : un bloc coupé entre deux pages en a deux.
     blocksOf(selectedLineId).forEach(function (block) {
-      var r = block.getBoundingClientRect();
+      var r = relRect(block);
       var box = document.createElement("div");
       box.className = "selection-box";
-      box.style.left = (r.left - origin.left - 4) + "px";
-      box.style.top = (r.top - origin.top - 4) + "px";
+      box.style.left = (r.left - 4) + "px";
+      box.style.top = (r.top - 4) + "px";
       box.style.width = (r.width + 8) + "px";
       box.style.height = (r.height + 8) + "px";
-      layerEl.appendChild(box);
+      boxesEl.appendChild(box);
     });
+  }
+
+  function positionBar() {
+    if (!barLineId || barPointerDown) return;
+    var blocks = blocksOf(barLineId);
+    if (!blocks.length) return;
+    var last = relRect(blocks[blocks.length - 1]);
+    var layerW = layerEl.getBoundingClientRect().width;
+    var left = Math.max(0, Math.min(last.left, layerW - barEl.offsetWidth));
+    barEl.style.left = left + "px";
+    barEl.style.top = (last.top + last.height + 12) + "px";
+  }
+
+  function refresh() {
+    if (selectedLineId && !findLine(selectedLineId)) {
+      selectedLineId = null;
+      hideBar();
+    }
+    drawBoxes();
+    positionBar();
+    if (editing) positionEditor();
+  }
+
+  function hideBar() {
+    barLineId = null;
+    barEl.hidden = true;
+    barEl.innerHTML = "";
+  }
+
+  function markCustom(fields, overrides) {
+    Array.prototype.forEach.call(fields.querySelectorAll("[data-setting]"), function (f) {
+      f.classList.toggle("is-custom", Object.prototype.hasOwnProperty.call(overrides, f.dataset.setting));
+    });
+  }
+
+  function moveLine(line, delta) {
+    var lines = getSheet().lines;
+    var i = lines.indexOf(line);
+    var j = i + delta;
+    if (i < 0 || j < 0 || j >= lines.length) return;
+    lines[i] = lines[j];
+    lines[j] = line;
+    onChange();
+    buildBar();
+  }
+
+  function deleteLine(line) {
+    var lines = getSheet().lines;
+    lines.splice(lines.indexOf(line), 1);
+    selectedLineId = null;
+    hideBar();
+    onChange();
+  }
+
+  // (Re)construit la barre pour la ligne sélectionnée : titre, ↑ ↓ ✕, champs
+  // de réglages (valeurs résolues ; celles qui diffèrent des réglages globaux
+  // sont marquées d'un point), lien « revenir aux réglages globaux ».
+  function buildBar() {
+    var line = selectedLineId && findLine(selectedLineId);
+    if (!line) { hideBar(); return; }
+    barLineId = line.id;
+    barEl.hidden = false;
+    barEl.innerHTML = "";
+
+    var head = document.createElement("div");
+    head.className = "floating-bar-head";
+    var title = document.createElement("span");
+    title.className = "floating-bar-title";
+    title.textContent = "Réglages de ce bloc";
+    var actions = document.createElement("span");
+    actions.className = "floating-bar-actions";
+    [["↑", "Monter", function () { moveLine(line, -1); }],
+     ["↓", "Descendre", function () { moveLine(line, 1); }],
+     ["✕", "Supprimer ce bloc", function () { deleteLine(line); }]].forEach(function (a) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "small" + (a[0] === "✕" ? " danger" : "");
+      b.textContent = a[0];
+      b.title = a[1];
+      b.setAttribute("aria-label", a[1]);
+      b.addEventListener("click", a[2]);
+      actions.appendChild(b);
+    });
+    head.appendChild(title);
+    head.appendChild(actions);
+
+    var fields = document.createElement("div");
+    fields.className = "floating-bar-fields";
+
+    var resetBtn = document.createElement("button");
+    resetBtn.type = "button";
+    resetBtn.className = "small floating-bar-reset";
+    resetBtn.textContent = "↺ Revenir aux réglages globaux";
+
+    function updateReset() {
+      resetBtn.hidden = Object.keys(line.overrides).length === 0;
+      markCustom(fields, line.overrides);
+    }
+
+    FE.UI.buildSettingsFields(fields, FE.Model.resolveLineSettings(getSheet(), line), function (key, value) {
+      line.overrides[key] = value;
+      updateReset();
+      onChange();
+    });
+
+    resetBtn.addEventListener("click", function () {
+      line.overrides = {};
+      onChange();
+      buildBar();
+    });
+    updateReset();
+
+    barEl.appendChild(head);
+    barEl.appendChild(fields);
+    barEl.appendChild(resetBtn);
+    positionBar();
+  }
+
+  // Resynchronise la barre (valeurs héritées des réglages globaux). Sans effet
+  // si la barre est masquée.
+  function syncBar() {
+    if (barLineId && !barPointerDown) buildBar();
   }
 
   function select(lineId) {
+    var changed = lineId !== selectedLineId;
     selectedLineId = lineId;
-    refresh();
+    if (changed) {
+      if (editing) finishEdit(false); // changer de bloc enregistre la saisie
+      if (lineId) {
+        buildBar();
+        var first = blocksOf(lineId)[0];
+        if (first && first.scrollIntoView) first.scrollIntoView({ block: "nearest" });
+      } else {
+        hideBar();
+      }
+    }
+    drawBoxes();
+    positionBar();
+  }
+
+  // ---- édition sur place ----
+
+  function canvasMetrics(family, fontPx, italic) {
+    var ctx = document.createElement("canvas").getContext("2d");
+    ctx.font = (italic ? "italic " : "") + fontPx + "px '" + family + "'";
+    var m = ctx.measureText("Hg");
+    var asc = m.fontBoundingBoxAscent;
+    var desc = m.fontBoundingBoxDescent;
+    if (!asc && !desc) { asc = fontPx * 0.8; desc = fontPx * 0.2; }
+    return { asc: asc, desc: desc };
+  }
+
+  // Géométrie du champ selon ce qu'on édite (coordonnées relatives à la couche).
+  function editorGeometry() {
+    var scale = previewScale();
+    var e = editing;
+    if (e.kind === "line") {
+      var line = findLine(e.id);
+      if (!line) return null;
+      var block = blocksOf(e.id)[0];
+      if (!block) return null;
+      var row = block.querySelector(".ligne-ecriture");
+      var resolved = FE.Model.resolveLineSettings(getSheet(), line);
+      var font = FE.Fonts.getById(resolved.fontId);
+      var metrics = FE.Render.computeRowMetrics(resolved.fontSizeMm, font);
+      var fontPx = resolved.fontSizeMm * FE.Render.FONT_SCALE * MM_TO_PX * scale;
+      var italic = resolved.fontStyle === "italic" && FE.Fonts.supportsItalic(resolved.fontId);
+      var cm = canvasMetrics(font.family, fontPx, italic);
+      var r = relRect(row);
+      var border = 2;
+      // Le mot doit reposer sur la même ligne de base que le modèle. Le texte
+      // d'un champ est centré verticalement et coupé à sa zone de contenu : on
+      // agrandit donc celle-ci jusqu'au bas de la rangée (pour ne pas couper
+      // les jambages) en recalculant `top` pour que la ligne de base ne bouge pas.
+      var baselineY = r.top + metrics.baselineY * MM_TO_PX * scale;
+      var toRowBottom = r.top + r.height - baselineY;
+      var glyphH = cm.asc + cm.desc;
+      var inner = Math.max(fontPx * 1.7, 2 * toRowBottom - glyphH + 2 * cm.asc);
+      var top = baselineY - border - ((inner - glyphH) / 2 + cm.asc);
+      return {
+        left: r.left - border, top: top, width: r.width + border * 2, height: inner + border * 2,
+        family: "'" + font.family + "', cursive", fontPx: fontPx,
+        fontStyle: italic ? "italic" : "normal", fontWeight: "400", lineHeight: inner + "px", padding: "0"
+      };
+    }
+    var target = previewEl.querySelector(e.kind === "title" ? ".fiche-name-heading" : ".fiche-consigne-text");
+    if (!target) return null;
+    var cs = getComputedStyle(target);
+    var tr = relRect(target);
+    var px = parseFloat(cs.fontSize) * scale;
+    var pad = 4;
+    return {
+      left: tr.left - pad, top: tr.top - pad, width: tr.width + pad * 2, height: Math.max(tr.height, px * 1.4) + pad * 2,
+      family: cs.fontFamily, fontPx: px, fontStyle: "normal", fontWeight: cs.fontWeight,
+      lineHeight: e.kind === "title" ? "1.2" : "1.4", padding: pad + "px"
+    };
+  }
+
+  function positionEditor() {
+    var g = editorGeometry();
+    if (!g) { finishEdit(true); return; }
+    var s = editing.el.style;
+    s.left = g.left + "px";
+    s.top = g.top + "px";
+    s.width = g.width + "px";
+    s.height = g.height + "px";
+    s.fontFamily = g.family;
+    s.fontSize = g.fontPx + "px";
+    s.fontStyle = g.fontStyle;
+    s.fontWeight = g.fontWeight;
+    s.lineHeight = g.lineHeight;
+    s.padding = g.padding;
+  }
+
+  function currentValue(kind, id) {
+    if (kind === "line") return findLine(id).text;
+    return kind === "title" ? getSheet().name : getSheet().consigne;
+  }
+
+  // Zone de saisie : un <div contenteditable> plutôt qu'un <input>, car Chrome
+  // rogne le texte d'un <input> à sa zone de contenu (les jambages des lettres
+  // seraient coupés). Texte brut uniquement.
+  function readValue(el, multiline) {
+    var v = el.textContent.replace(/\u00a0/g, " ");
+    return multiline ? v.replace(/\n+$/, "") : v.replace(/[\r\n]+/g, " ");
+  }
+
+  function startEdit(kind, id) {
+    if (editing) finishEdit(false);
+    var multiline = kind === "consigne";
+    var el = document.createElement("div");
+    el.className = "inline-editor" + (multiline ? " is-multiline" : "");
+    el.setAttribute("data-placeholder", kind === "line" ? "Écrivez un mot…" : (kind === "title" ? "Titre de la fiche" : "Écrivez la consigne…"));
+    el.contentEditable = "plaintext-only";
+    var plain = el.contentEditable === "plaintext-only";
+    if (!plain) el.contentEditable = "true"; // navigateurs sans plaintext-only
+    el.spellcheck = false;
+    el.textContent = currentValue(kind, id);
+    editing = { kind: kind, id: id, el: el, done: false, multiline: multiline };
+    if (kind === "line") {
+      var b0 = blocksOf(id)[0];
+      if (b0) b0.classList.add("is-editing");
+    }
+    layerEl.appendChild(el);
+    positionEditor();
+    el.focus();
+    var range = document.createRange();
+    range.selectNodeContents(el);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finishEdit(true); }
+      else if (e.key === "Enter" && (!multiline || e.ctrlKey || e.metaKey)) { e.preventDefault(); e.stopPropagation(); finishEdit(false); }
+      else if (e.key === "Enter" && !plain) { e.preventDefault(); document.execCommand("insertText", false, "\n"); }
+    });
+    if (!plain) {
+      el.addEventListener("paste", function (e) {
+        e.preventDefault();
+        var t = (e.clipboardData || window.clipboardData).getData("text");
+        document.execCommand("insertText", false, t);
+      });
+    }
+    el.addEventListener("blur", function () { finishEdit(false); });
+  }
+
+  // Termine l'édition en cours : `cancel` abandonne la saisie, sinon la valeur
+  // est enregistrée puis la fiche est redessinée.
+  function finishEdit(cancel) {
+    var e = editing;
+    if (!e || e.done) return;
+    e.done = true;
+    editing = null;
+    var value = readValue(e.el, e.multiline);
+    if (e.el.parentNode) e.el.parentNode.removeChild(e.el);
+    if (e.kind === "line") {
+      blocksOf(e.id).forEach(function (b) { b.classList.remove("is-editing"); });
+    }
+
+    var changed = false;
+    if (!cancel) {
+      if (e.kind === "line") {
+        var line = findLine(e.id);
+        if (line && line.text !== value) { line.text = value; changed = true; }
+      } else if (e.kind === "title") {
+        if (getSheet().name !== value) { getSheet().name = value; changed = true; }
+      } else if (getSheet().consigne !== value) {
+        getSheet().consigne = value;
+        changed = true;
+      }
+    }
+    var wasAddingConsigne = addingConsigne;
+    addingConsigne = false;
+    if (changed || wasAddingConsigne) onChange();
+  }
+
+  function addConsigne() {
+    addingConsigne = true;
+    onChange();
+    startEdit("consigne", null);
+  }
+
+  function addLine() {
+    var line = FE.Model.createDefaultLine("");
+    getSheet().lines.push(line);
+    onChange();
+    select(line.id);
+    startEdit("line", line.id);
+  }
+
+  // ---- événements ----
+
+  function onMouseDown(e) {
+    var block = e.target.closest ? e.target.closest(".fiche-bloc") : null;
+    if (block) {
+      var id = block.getAttribute("data-line-id");
+      wasSelectedOnDown = id === selectedLineId;
+      select(id);
+    } else {
+      wasSelectedOnDown = false;
+      if (!(e.target.closest && e.target.closest(".add-consigne-hint"))) select(null);
+    }
   }
 
   function onClick(e) {
-    var block = e.target.closest ? e.target.closest(".fiche-bloc") : null;
-    select(block ? block.getAttribute("data-line-id") : null);
+    var t = e.target.closest ? e.target : null;
+    if (!t) return;
+    if (t.closest(".add-consigne-hint")) { addConsigne(); return; }
+    if (t.closest(".fiche-name-heading")) { select(null); startEdit("title", null); return; }
+    if (t.closest(".fiche-consigne")) { select(null); startEdit("consigne", null); return; }
+    var block = t.closest(".fiche-bloc");
+    // Second clic sur un bloc déjà sélectionné : on édite son texte.
+    if (block && wasSelectedOnDown) startEdit("line", block.getAttribute("data-line-id"));
   }
 
-  function init(preview, layer, sheetGetter) {
+  function onKeyDown(e) {
+    var tag = e.target && e.target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    if (e.target && e.target.closest && e.target.closest(".inline-editor")) return;
+    if (e.key === "Escape" && selectedLineId) select(null);
+    else if (e.key === "Enter" && selectedLineId && !editing) {
+      e.preventDefault();
+      startEdit("line", selectedLineId);
+    }
+  }
+
+  function init(preview, layer, sheetGetter, changeCallback) {
     previewEl = preview;
     layerEl = layer;
     getSheet = sheetGetter;
-    previewEl.addEventListener("click", onClick);
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && selectedLineId) select(null);
+    onChange = changeCallback;
+
+    boxesEl = document.createElement("div");
+    layerEl.appendChild(boxesEl);
+    barEl = document.createElement("div");
+    barEl.className = "floating-bar";
+    barEl.hidden = true;
+    layerEl.appendChild(barEl);
+
+    // Pendant qu'un curseur de la barre est tenu, on ne la déplace pas (la
+    // hauteur du bloc change avec le réglage et la barre fuirait sous la souris).
+    barEl.addEventListener("pointerdown", function () { barPointerDown = true; });
+    document.addEventListener("pointerup", function () {
+      if (!barPointerDown) return;
+      barPointerDown = false;
+      positionBar();
     });
+
+    previewEl.addEventListener("mousedown", onMouseDown);
+    previewEl.addEventListener("click", onClick);
+    document.addEventListener("keydown", onKeyDown);
+
+    var addBtn = document.getElementById("btn-add-line");
+    if (addBtn) addBtn.addEventListener("click", addLine);
   }
 
   return {
     init: init,
     refresh: refresh,
     select: select,
+    syncBar: syncBar,
+    renderOptions: renderOptions,
     getSelectedId: function () { return selectedLineId; }
   };
 })();

@@ -18,25 +18,8 @@
     <h1>Fiches d'écriture</h1>
 
     <section>
-      <div class="field">
-        <label for="field-sheet-name">Nom de la fiche</label>
-        <input type="text" id="field-sheet-name">
-      </div>
-      <div class="field">
-        <label for="field-consigne">Consigne / technique à utiliser (affichée en haut de la fiche)</label>
-        <textarea id="field-consigne" placeholder="Ex : Tiens bien ton crayon, repasse sur les pointillés sans lever la main."></textarea>
-      </div>
-    </section>
-
-    <section>
       <div class="section-title">Réglages par défaut de la fiche</div>
       <div id="global-settings"></div>
-    </section>
-
-    <section>
-      <div class="section-title">Lignes de la fiche</div>
-      <div id="lines-list"></div>
-      <button type="button" id="btn-add-line" class="add-line-btn">+ Ajouter une ligne</button>
     </section>
 
     <section>
@@ -58,6 +41,9 @@
       <div class="preview-stage">
         <div id="fiche-preview"></div>
         <div id="selection-layer" class="no-print"></div>
+      </div>
+      <div class="add-line-row no-print">
+        <button type="button" id="btn-add-line">+ Ajouter une ligne</button>
       </div>
     </div>
   </main>
