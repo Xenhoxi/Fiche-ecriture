@@ -231,6 +231,7 @@ FE.PreviewEditor = (function () {
     }
     drawBoxes();
     positionBar();
+    positionTools();
   }
 
   // ---- édition sur place ----
@@ -460,9 +461,16 @@ FE.PreviewEditor = (function () {
   // ---- outils au survol : « + » (insérer dessous) et poignée ⠿ ----
   // Poignée : glisser = déplacer le bloc ; simple clic = menu du bloc.
 
+  // Le bloc qui porte les outils : celui qu'on survole, sinon la ligne
+  // sélectionnée (les outils restent donc tant qu'une ligne est sélectionnée).
+  function toolsId() {
+    return hoverId || selectedLineId;
+  }
+
   function positionTools() {
-    if (!hoverId || drag && drag.moved) { if (!drag) toolsEl.hidden = true; return; }
-    var blocks = blocksOf(hoverId);
+    if (drag && drag.moved) return; // pendant un glissement, les outils ne bougent pas
+    var id = toolsId();
+    var blocks = id ? blocksOf(id) : [];
     if (!blocks.length) { toolsEl.hidden = true; return; }
     var r = relRect(blocks[0]);
     toolsEl.hidden = false;
@@ -482,7 +490,7 @@ FE.PreviewEditor = (function () {
     hoverTimer = setTimeout(function () {
       if (drag || menuEl && !menuEl.hidden) return;
       hoverId = null;
-      toolsEl.hidden = true;
+      positionTools(); // retour à la ligne sélectionnée, ou masqué s'il n'y en a pas
     }, 220);
   }
 
@@ -599,15 +607,15 @@ FE.PreviewEditor = (function () {
       if (from !== d.target.index) onChange();
     }
     hoverId = null;
-    toolsEl.hidden = true;
+    positionTools();
   }
 
   function onHandleDown(e) {
-    if (e.button !== 0 || !hoverId) return;
+    if (e.button !== 0 || !toolsId()) return;
     e.preventDefault();
     var handle = e.currentTarget;
     try { handle.setPointerCapture(e.pointerId); } catch (err) { /* pointeur synthétique */ }
-    drag = { id: hoverId, x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, moved: false, target: null, raf: 0 };
+    drag = { id: toolsId(), x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, moved: false, target: null, raf: 0 };
     select(drag.id);
     drag.raf = requestAnimationFrame(dragTick);
   }
@@ -638,6 +646,18 @@ FE.PreviewEditor = (function () {
       wasSelectedOnDown = false;
       if (!(e.target.closest && e.target.closest(".add-consigne-hint"))) select(null);
     }
+  }
+
+  // Un clic hors de la feuille (fond gris, panneau de gauche…) désélectionne :
+  // la barre de réglages, le cadre et les outils disparaissent. Restent
+  // « dedans » : les pages, la barre, les outils, le menu, le champ de saisie
+  // et le bouton d'ajout.
+  function onDocumentMouseDown(e) {
+    if (!selectedLineId) return;
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest(".fiche-page, .floating-bar, .block-tools, .block-menu, .inline-editor, .add-line-row")) return;
+    select(null);
   }
 
   function onClick(e) {
@@ -703,7 +723,7 @@ FE.PreviewEditor = (function () {
     plus.title = "Ajouter une ligne en dessous";
     plus.setAttribute("aria-label", "Ajouter une ligne en dessous");
     plus.addEventListener("click", function () {
-      var i = indexOfLine(hoverId);
+      var i = indexOfLine(toolsId());
       if (i >= 0) insertLineAt(i + 1);
     });
     var handle = document.createElement("button");
@@ -746,6 +766,7 @@ FE.PreviewEditor = (function () {
     previewEl.addEventListener("mouseleave", scheduleHoverEnd);
 
     previewEl.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("mousedown", onDocumentMouseDown);
     previewEl.addEventListener("click", onClick);
     document.addEventListener("keydown", onKeyDown);
 

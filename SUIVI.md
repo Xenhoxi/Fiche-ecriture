@@ -171,7 +171,11 @@ auto). Reste : validation par l'utilisateur, puis merge dans `main` (non fait).
   - `renderSheet(sheet, previewEl, opts)` : `opts.forceConsigne` (via
     `FE.PreviewEditor.renderOptions()`).
 - **Étape 3** (tout dans `preview-editor.js`, styles en fin de `css/editor.css`) :
-  - Survol d'un bloc → `.block-tools` à gauche : « + » (insère dessous) et
+  - `.block-tools` (à gauche du bloc, `toolsId()` = bloc survolé, sinon ligne
+    SÉLECTIONNÉE : ils restent tant qu'une ligne est sélectionnée). Un clic hors
+    de la feuille (fond gris, panneau de gauche ; pas les pages, barre, outils,
+    menu, champ de saisie, bouton d'ajout) désélectionne : cadre, barre et outils
+    disparaissent (`onDocumentMouseDown`). Contenu : « + » (insère dessous) et
     poignée ⠿. Poignée : glisser = déplacer (pointer events, capture sur la
     poignée) ; simple clic (< 4 px) = `.block-menu` (insérer au-dessus /
     dessous, dupliquer, supprimer). Clavier : Suppr supprime le bloc
