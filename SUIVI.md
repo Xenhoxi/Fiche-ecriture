@@ -1,7 +1,31 @@
 # Suivi de projet — Fiche-Écriture
 
 > Fichier de reprise de session. À lire en premier avant toute nouvelle modification.
-> Dernière mise à jour : 2026-09-21.
+> Dernière mise à jour : 2026-09-21 (fin de session).
+
+## État du dépôt — À LIRE EN PREMIER
+
+- **`main`** (= `origin/main`, commit `a533e25`) : ce que GitHub Pages publie
+  (https://xenhoxi.github.io/fiche-ecriture/). Contient retour à la ligne,
+  « Nombre de lignes », pointillé simple/double, polices Marelle. **Ne pas y
+  toucher sans accord explicite de l'utilisateur.**
+- **`edition-sur-apercu`** (poussée sur `origin`, **PAS mergée** — l'utilisateur
+  a dit « push mais ne merge pas ») : refonte « édition directe sur
+  l'aperçu » (étapes 1 à 4, voir plus bas) + retouches demandées ensuite
+  (bouton « + Ajouter une ligne » sous la dernière ligne, ancien texte masqué
+  pendant la saisie, titre/consigne en direct avec Entrée/Maj+Entrée, outils du
+  bloc persistants + désélection hors feuille, boutons dupliquer/supprimer,
+  curseur de taille fluide). Session de travail : cette branche.
+- **Tester la branche sans merge : en attente.** L'utilisateur a répondu « on ne
+  fait rien pour l'instant ». Options déjà exposées : (1) test local — worktree
+  + `python3 -m http.server`, ou ouvrir `index.html` (marche en `file://`) ;
+  (2) dépôt de prévisualisation séparé avec Pages ; (3) basculer la source de
+  Pages sur la branche (REMPLACE le site en ligne) ; (4) workflow GitHub
+  Actions (main à la racine + branche sous `/preview/`, oblige à commiter sur
+  `main`). Faits : Pages = build « legacy », source `main` `/`, dépôt public,
+  aucun `.github/`, `gh` connecté (compte `Xenhoxi`). `localStorage` est propre à
+  chaque adresse (site, `localhost:port`, `file://`) : une préversion ne voit
+  pas les fiches enregistrées du site en ligne.
 
 ## Quoi
 
@@ -12,7 +36,7 @@ répétitions en pointillé à repasser). Sauvegarde locale (localStorage),
 export PDF via impression navigateur. Fonctionne hors-ligne (polices
 embarquées en `.woff2`).
 
-Dépôt git (branche `main`) + GitHub Pages : https://github.com/Xenhoxi/fiche-ecriture → https://xenhoxi.github.io/fiche-ecriture/ (branche `main`, déploiement à chaque `git push`). Deux images de référence fournies
+Dépôt git (branche `main`) + GitHub Pages : https://github.com/Xenhoxi/fiche-ecriture → https://xenhoxi.github.io/fiche-ecriture/ (branche `main`, déploiement à chaque push sur `main`). Deux images de référence fournies
 par l'utilisateur restent à la racine (`Exemple ligne.jpeg`,
 `fiche actuelle.jpeg`) — pures références visuelles, pas utilisées par le
 code, à garder sauf demande contraire.
@@ -20,9 +44,9 @@ code, à garder sauf demande contraire.
 ## Architecture des fichiers
 
 ```
-index.html              squelette : sidebar (éditeur) + zone d'aperçu
+index.html              squelette : sidebar réduite + zone d'aperçu (pages) + #selection-layer
 css/base.css             design system (couleurs, boutons, sliders, toggle)
-css/editor.css           sidebar, cartes de ligne, accordéon
+css/editor.css           sidebar, édition sur l'aperçu (barre flottante, outils/menu de bloc, champ de saisie, trait d'insertion)
 css/print.css            @media print
 css/sheet.css            page imprimable (.fiche-page), conteneur de ligne (.ligne-ecriture)
 js/model.js               FE.Model — modèle de données, defaults, validation/migration
@@ -30,10 +54,10 @@ js/fonts-catalog.js        FE.Fonts — catalogue polices (Caveat, Patrick Hand,
 js/storage.js               FE.Storage — CRUD localStorage des fiches
 js/history.js                   FE.History — annuler/rétablir + brouillon auto
 js/skeleton.js                 FE.Skeleton — ligne centrale des lettres (pointillé simple)
-js/preview-editor.js            FE.PreviewEditor — sélection d'un bloc sur l'aperçu (couche #selection-layer)
+js/preview-editor.js            FE.PreviewEditor — édition directe sur l'aperçu (sélection, saisie sur place, barre flottante, outils, menu, glisser-déposer)
 js/dotted-text.js            FE.DottedText — génère le SVG de chaque ligne (mots + repères de réglure)
 js/render.js                  FE.Render — construit le DOM de la fiche, calcule les métriques de ligne
-js/ui-controls.js              FE.UI — sidebar, binding des événements
+js/ui-controls.js              FE.UI — sidebar réduite (réglages globaux, fiches sauvegardées, impression, annuler/rétablir), générateur de champs de réglages
 js/main.js                      bootstrap, mise à l'échelle responsive de l'aperçu
 fonts/                            .woff2 embarqués + fonts.css + LICENSES.txt + LICENSE-Marelle.txt
 ```
@@ -116,7 +140,9 @@ Objectif : éditer directement sur l'aperçu façon Notion. 4 étapes, un commit
 chacune, `main` intact jusqu'à validation. **Étapes 1 à 4 faites** (blocs, pages
 multiples, sélection ; édition sur place, barre flottante, panneau gauche
 réduit ; glisser-déposer, ajout/suppression ; annuler/rétablir + brouillon
-auto). Reste : validation par l'utilisateur, puis merge dans `main` (non fait).
+auto), plus les retouches listées dans « État du dépôt ». La branche est
+poussée ; reste : validation par l'utilisateur, puis merge dans `main` (NON
+fait, à ne faire que sur demande explicite).
 
 - `renderSheet` produit `.fiche-pages` > N `.fiche-page` (210×297mm fixes) >
   `.fiche-bloc[data-line-id]` > `.ligne-ecriture`. Titre + consigne en page 1
@@ -215,7 +241,7 @@ auto). Reste : validation par l'utilisateur, puis merge dans `main` (non fait).
   - Test headless avec persistance : deux lancements Chrome avec le même
     `--user-data-dir` (localStorage partagé), le 2e avec `#reload`.
 
-### Retour à la ligne et nombre de lignes (2026-09-21, non commité)
+### Retour à la ligne et nombre de lignes (2026-09-21, sur `main`)
 
 - `FE.DottedText.planRows()` découpe le texte en fragments : un fragment doit
   tenir 2× dans la largeur (modèle + ≥1 répétition pointillée), sinon retour
@@ -230,7 +256,7 @@ auto). Reste : validation par l'utilisateur, puis merge dans `main` (non fait).
   fin des mesures. Elle vaut aussi 0 tant que la police n'est pas chargée
   (rattrapé par `reloadIfFontsPending`).
 
-### Pointillé simple / double (2026-09-21, non commité)
+### Pointillé simple / double (2026-09-21, sur `main`)
 
 - `dotStyle` (toggle « Pointillés doubles », global + par ligne), défaut
   `"single"`. `"double"` = ancien rendu (contour du glyphe pointillé, donc
@@ -283,21 +309,22 @@ Sources `.ttf`/`.otf` + PDF spécimen dans `marelle-ttf/` et
 - Rendu Caveat en contour pointillé : semble très chargé (constaté
   2026-09-21, non modifié).
 
-### UI (`ui-controls.js`)
+### UI (`ui-controls.js` + `preview-editor.js`, sur la branche `edition-sur-apercu`)
 
-- Réglages globaux et personnalisation par ligne partagent le même
-  générateur de champs `buildSettingsFields()` : Police (select), Taille
-  (slider), Répétitions (slider), Taille des pointillés (slider), Italique
-  (toggle). Plus de sélecteur de "style de ligne" (retiré avec le point
-  précédent).
-- Panneau de personnalisation par ligne : bouton icône ⚙ compact (plus de
-  lien texte "Personnaliser cette ligne"), **accordéon** (ouvrir une ligne
-  referme les autres) pour éviter le scroll avec beaucoup de lignes. Lien
-  "↺ Revenir aux réglages globaux" visible seulement si la ligne a des
-  overrides actifs.
-- Responsive : `.fiche-page` mis à l'échelle via `transform: scale()` en JS
+- Le panneau de gauche est **réduit** : annuler/rétablir + état du brouillon,
+  réglages globaux, fiches sauvegardées (Nouvelle / Enregistrer / Charger /
+  Dupliquer / Suppr.), impression. Plus de liste de lignes, plus d'accordéon ni de
+  ⚙ : tout s'édite sur l'aperçu (détails dans la section « Refonte » ci-dessus).
+- Réglages globaux et barre flottante d'un bloc partagent le même générateur de
+  champs `FE.UI.buildSettingsFields()` (Police, Taille, Répétitions, Nombre de
+  lignes, Taille des pointillés, Pointillés doubles, Italique ; chaque champ porte
+  `data-setting`). Lien « ↺ Revenir aux réglages globaux » visible seulement si le
+  bloc a des overrides ; « • » marque les réglages propres au bloc.
+- Responsive : `.fiche-pages` mis à l'échelle via `transform: scale()` en JS
   (`main.js`) si le conteneur est trop étroit ; `print.css` neutralise ce
   transform à l'impression.
+- **Sur `main`** (version publiée), l'UI est encore l'ancienne : liste de lignes
+  dans le panneau, ⚙ par ligne en accordéon.
 
 ## Méthode de test qui marche (à réutiliser)
 
@@ -313,6 +340,25 @@ Sources `.ttf`/`.otf` + PDF spécimen dans `marelle-ttf/` et
   geler l'automatisation navigateur sur une dialog native) : injecter
   `css/print.css` comme feuille de style normale + `display:none` sur
   `.no-print` via JS, puis screenshot.
+- Impression réelle : `google-chrome --headless=new --no-sandbox
+  --no-pdf-header-footer --print-to-pdf=out.pdf URL` applique vraiment
+  `@media print` (plus fiable que la simulation CSS) ; compter les pages du PDF,
+  `pdftoppm -r 60 -png` pour les regarder. Attention : un élément de test
+  (`<pre>` de journal) ajouté à la page s'imprime aussi.
+- **Mesures de performance** : avec `--virtual-time-budget`, `performance.now()`
+  est virtuel (tout à 0 ms). Pour chronométrer, lancer SANS budget virtuel :
+  `timeout 40 google-chrome --headless=new --no-sandbox --enable-logging=stderr
+  --v=0 URL 2>&1 | grep CONSOLE` et `console.log` les résultats.
+- Piloter l'UI par script injecté : `dispatchEvent` de `mousedown`/`mouseup`/`click`
+  (clic), `PointerEvent` (glisser ; `setPointerCapture` échoue sur un pointeur
+  synthétique → déjà entouré d'un try/catch), `KeyboardEvent` (le `default` d'une
+  frappe synthétique n'insère PAS de texte : écrire `textContent` puis
+  `dispatchEvent(new Event("input"))`). **Requêter le DOM au moment de l'action** :
+  un rendu déclenché par `document.fonts.ready` remplace tout le DOM et périme les
+  références. Attendre `document.fonts.load("10px Marelle")` avant toute mesure de
+  texte (sinon largeur 0).
+- localStorage persistant entre deux lancements headless : même
+  `--user-data-dir=/tmp/xxx` (le supprimer ensuite).
 - **Piège rencontré plusieurs fois** : l'outil de capture d'écran/zoom du
   navigateur est parfois flaky (timeout puis résultat blanc/périmé au retry
   immédiat suivant). Ne pas conclure à un bug de rendu sur une seule capture
@@ -324,24 +370,37 @@ Sources `.ttf`/`.otf` + PDF spécimen dans `marelle-ttf/` et
 
 ## Points ouverts pour la prochaine session
 
-- Le contour pointillé peut encore sembler légèrement "dédoublé" sur
-  Caveat (police à trait épais) pour de petites valeurs de `dashSizeMm` —
-  s'atténue en augmentant le slider. Pas signalé comme problème au dernier
-  échange, à surveiller si ça revient.
-- Jamais testé un vrai `window.print()` (dialogue natif) — seulement la
-  simulation CSS. Un test réel par l'utilisateur serait utile.
-- Le modèle (1ère occurrence) est collé à gauche alors que les répétitions
-  sont centrées dans leur emplacement : l'écart modèle → 1ère répétition
-  est un peu plus large que les autres. Pas signalé comme gênant.
-- Pas de suite de tests automatisés, tout est vérifié manuellement à chaque
-  session.
+- **Décisions en attente de l'utilisateur** : comment tester la branche sans merge
+  (voir « État du dépôt ») ; quand/si merger `edition-sur-apercu` dans `main`.
+- **Rien n'a été essayé avec une vraie souris / un vrai clavier** : glisser-déposer,
+  saisie sur place (Maj+Entrée), curseurs, menu — tout a été vérifié par événements
+  synthétiques en headless. Un essai réel par l'utilisateur est le prochain test utile.
+- Jamais testé un vrai `window.print()` (dialogue natif) — seulement `--print-to-pdf`.
+- « Nouvelle fiche » / « Charger » non testés de bout en bout (boîte `confirm`
+  native impossible à piloter en headless) ; le reste de l'historique l'est.
+- Pointillé simple vérifié visuellement seulement avec Marelle (Caveat, Patrick
+  Hand, Dancing Script non regardés). Sur Caveat, le contour double peut sembler
+  « dédoublé » pour de petits `dashSizeMm`.
+- Questions posées à l'utilisateur, sans réponse : un clic dans le panneau de
+  gauche désélectionne le bloc (voulu ?) ; la barre de réglages recouvre le bouton
+  « + Ajouter une ligne » quand la dernière ligne est sélectionnée.
+- Curseur de taille : ~13 ms/cran depuis que le squelette est mis à l'échelle, avec
+  quelques pics à 47–85 ms non élucidés ; la 1re apparition d'un mot coûte encore
+  un calcul de squelette (~100+ ms).
+- L'annulation (historique) ne survit pas au rechargement (seul le brouillon de la
+  fiche est restauré).
+- Le modèle (1ère occurrence) est collé à gauche alors que les répétitions sont
+  centrées dans leur emplacement : écart modèle → 1ère répétition un peu plus large.
+  Pas signalé comme gênant.
+- Pas de suite de tests automatisés, tout est vérifié manuellement à chaque session.
 
-## Pour reprendre demain
+## Pour reprendre
 
-1. Lire ce fichier.
-2. Relire `js/model.js`, `js/render.js`, `js/dotted-text.js`, `js/ui-controls.js`,
-   `css/sheet.css` pour se remettre en tête l'état exact du code (les
-   constantes ci-dessus peuvent avoir légèrement bougé si retouchées).
-3. Relancer le serveur local et tester dans le navigateur avant toute
-   nouvelle modification, avec la méthode de vérification pixel si un doute
-   porte sur la visibilité/position d'un élément graphique.
+1. Lire ce fichier (surtout « État du dépôt »). Vérifier `git branch --show-current`
+   (le travail est sur `edition-sur-apercu`) et `git status`.
+2. Relire, selon le sujet : `js/preview-editor.js` (édition sur l'aperçu),
+   `js/render.js` (pagination), `js/history.js`, `js/dotted-text.js`,
+   `js/skeleton.js`, `js/ui-controls.js`, `css/sheet.css`, `css/editor.css`.
+3. Ne PAS merger dans `main` ni publier sans demande explicite.
+4. Relancer le serveur local et tester dans le navigateur avant toute nouvelle
+   modification (méthode ci-dessus), l'arrêter en fin de session.
