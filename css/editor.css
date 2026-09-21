@@ -172,10 +172,25 @@
 
 /* ---- Édition sur l'aperçu ---- */
 
+/* « + Ajouter une ligne » : posé par FE.PreviewEditor juste sous le dernier
+   bloc (sur la page où il se trouve), à la largeur du contenu. */
 .add-line-row {
-  display: flex;
-  justify-content: center;
-  margin-top: 16px;
+  position: absolute;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+.add-line-row button {
+  width: 100%;
+  color: var(--color-muted);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1.5px dashed var(--color-border-strong);
+}
+
+.add-line-row button:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
 }
 
 /* La couche ne capte pas la souris, sauf la barre, le champ de saisie, les

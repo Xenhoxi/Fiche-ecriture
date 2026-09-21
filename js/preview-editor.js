@@ -30,6 +30,7 @@ FE.PreviewEditor = (function () {
   var addingConsigne = false;
   var wasSelectedOnDown = false;
 
+  var addRowEl = null;       // « + Ajouter une ligne », sous le dernier bloc
   var toolsEl = null;        // « + » et poignée ⠿ affichés au survol d'un bloc
   var menuEl = null;         // menu du bloc (poignée cliquée sans glisser)
   var dropEl = null;         // trait d'insertion pendant un glisser-déposer
@@ -97,6 +98,19 @@ FE.PreviewEditor = (function () {
     barEl.style.top = (last.top + last.height + 12) + "px";
   }
 
+  // Place « + Ajouter une ligne » juste sous le dernier bloc (ou sous l'invite
+  // de fiche vide), à la largeur du contenu de la page.
+  function positionAddRow() {
+    var blocks = previewEl.querySelectorAll(".fiche-bloc");
+    var anchor = blocks.length ? blocks[blocks.length - 1] : previewEl.querySelector(".fiche-empty-hint");
+    if (!anchor) { addRowEl.hidden = true; return; }
+    var r = relRect(anchor);
+    addRowEl.hidden = false;
+    addRowEl.style.left = r.left + "px";
+    addRowEl.style.top = (r.top + r.height + 12) + "px";
+    addRowEl.style.width = r.width + "px";
+  }
+
   function refresh() {
     if (selectedLineId && !findLine(selectedLineId)) {
       selectedLineId = null;
@@ -105,6 +119,7 @@ FE.PreviewEditor = (function () {
     drawBoxes();
     positionBar();
     positionTools();
+    positionAddRow();
     if (editing) positionEditor();
   }
 
@@ -702,6 +717,7 @@ FE.PreviewEditor = (function () {
     previewEl.addEventListener("click", onClick);
     document.addEventListener("keydown", onKeyDown);
 
+    addRowEl = layerEl.querySelector(".add-line-row");
     var addBtn = document.getElementById("btn-add-line");
     if (addBtn) addBtn.addEventListener("click", addLine);
   }

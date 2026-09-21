@@ -148,7 +148,10 @@ auto). Reste : validation par l'utilisateur, puis merge dans `main` (non fait).
     à chaque rendu (un curseur tenu serait détruit) : `syncBar()` la
     resynchronise après un changement de réglages globaux ; elle ne bouge pas
     tant qu'un curseur est tenu (`barPointerDown`).
-  - « + Ajouter une ligne » est maintenant sous l'aperçu (`#btn-add-line`).
+  - « + Ajouter une ligne » (`#btn-add-line`, dans `#selection-layer`) est posé par
+    `positionAddRow()` juste SOUS LE DERNIER BLOC, sur la page où il se trouve, à la
+    largeur du contenu (pas sous toute la pile de pages) ; sous l'invite si la fiche
+    est vide. Recalé à chaque `refresh()`.
   - Piège : le keydown Entrée d'un champ doit `stopPropagation()`, sinon le
     gestionnaire global (Entrée = éditer le bloc sélectionné) le rouvre.
   - Sélection sur `mousedown` (avant le blur du champ en cours), démarrage de
