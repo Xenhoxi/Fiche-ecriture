@@ -131,6 +131,10 @@ FE.DottedText = (function () {
     // — quitte à en afficher moins que demandé.
     var slotWidth = Math.max(idealSlotWidth, wordWidth + minGapMm);
     var visibleCount = Math.max(1, Math.min(repetitions, Math.floor(availableWidthMm / slotWidth)));
+    // Répétitions en trop tronquées : on répartit alors celles qui tiennent
+    // sur toute la largeur, au lieu de les coller à gauche en laissant un
+    // vide à droite.
+    slotWidth = availableWidthMm / visibleCount;
     var startPadding = Math.max(0, (slotWidth - wordWidth) / 2);
 
     for (var i = 0; i < visibleCount; i++) {
