@@ -12,7 +12,7 @@ répétitions en pointillé à repasser). Sauvegarde locale (localStorage),
 export PDF via impression navigateur. Fonctionne hors-ligne (polices
 embarquées en `.woff2`).
 
-Dépôt git + GitHub Pages : https://github.com/Xenhoxi/fiche-ecriture → https://xenhoxi.github.io/fiche-ecriture/ (branche `main`, déploiement à chaque `git push`). Deux images de référence fournies
+Dépôt git (branche `main`) + GitHub Pages : https://github.com/Xenhoxi/fiche-ecriture → https://xenhoxi.github.io/fiche-ecriture/ (branche `main`, déploiement à chaque `git push`). Deux images de référence fournies
 par l'utilisateur restent à la racine (`Exemple ligne.jpeg`,
 `fiche actuelle.jpeg`) — pures références visuelles, pas utilisées par le
 code, à garder sauf demande contraire.
@@ -100,6 +100,12 @@ par l'utilisateur et annulée.
   (police trop grande pour le nb de répétitions), l'espacement s'élargit et
   le nombre d'occurrences affichées diminue plutôt que de superposer du
   texte illisible.
+- Répartition (commit `0bb358a`, fusionné dans `main` par `e5bed45`) : quand
+  les répétitions demandées dépassent ce qui tient, celles qui restent
+  sont réparties sur TOUTE la largeur (`slotWidth = largeur / visibleCount`)
+  au lieu d'être collées à gauche avec un vide à droite. Pour annuler
+  seulement ça : `git revert -m 1 e5bed45` (ou repartir de `c68b0ea`,
+  Marelle seul). La branche `repartition-repetitions` existe aussi.
 
 ### Police / italique
 
@@ -155,7 +161,13 @@ Sources `.ttf`/`.otf` + PDF spécimen dans `marelle-ttf/` et
 ## Méthode de test qui marche (à réutiliser)
 
 - Serveur local : `python3 -m http.server 8934 --directory "/home/barbatruc/Desktop/Fiche-Ecriture"`,
-  puis `pkill -f "http.server 8934"` en fin de session.
+  puis l'arrêter en fin de session. Attention : `pkill -f` lancé dans la
+  même commande shell tue le shell (code 144), le lancer seul.
+- Test headless Chrome : `google-chrome --headless=new --no-sandbox
+  --force-device-scale-factor=2.5 --virtual-time-budget=4000
+  --screenshot=out.png http://localhost:8934/index.html`, puis recadrer
+  avec PIL. Pour piloter l'UI, servir une copie temporaire de `index.html`
+  avec un `<script>` injecté (à supprimer ensuite).
 - Test d'impression **sans ouvrir la vraie boîte de dialogue** (risque de
   geler l'automatisation navigateur sur une dialog native) : injecter
   `css/print.css` comme feuille de style normale + `display:none` sur
@@ -177,6 +189,9 @@ Sources `.ttf`/`.otf` + PDF spécimen dans `marelle-ttf/` et
   échange, à surveiller si ça revient.
 - Jamais testé un vrai `window.print()` (dialogue natif) — seulement la
   simulation CSS. Un test réel par l'utilisateur serait utile.
+- Le modèle (1ère occurrence) est collé à gauche alors que les répétitions
+  sont centrées dans leur emplacement : l'écart modèle → 1ère répétition
+  est un peu plus large que les autres. Pas signalé comme gênant.
 - Pas de suite de tests automatisés, tout est vérifié manuellement à chaque
   session.
 
