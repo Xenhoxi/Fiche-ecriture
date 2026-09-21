@@ -10,9 +10,10 @@
   `0274553` de `edition-sur-apercu`, faite sur demande explicite de l'utilisateur
   le 2026-09-21 pour pouvoir la tester en ligne), en plus du retour à la ligne, du
   « Nombre de lignes », du pointillé simple/double et des polices Marelle.
-- **`edition-sur-apercu`** : conservée (poussée sur `origin`), non supprimée ;
-  identique à `main` au moment de la fusion. Les nouveautés se font désormais sur
-  une nouvelle branche ou sur `main` selon ce que demande l'utilisateur.
+- **`edition-sur-apercu`** : conservée (poussée sur `origin`), non supprimée. Elle
+  est désormais EN RETARD sur `main` (il n'y manque que le commit de fusion et
+  des commits de `SUIVI.md`) : ne plus travailler dessus. Les nouveautés se font
+  sur une nouvelle branche ou sur `main` selon ce que demande l'utilisateur.
 - Ce qui a été fusionné : pages multiples, édition sur place (texte, titre,
   consigne), barre flottante de réglages, glisser-déposer, ajout/duplication/
   suppression au survol, annuler/rétablir + brouillon automatique, bouton
@@ -21,8 +22,11 @@
 - **À faire : essai réel par l'utilisateur sur le site en ligne** (souris,
   clavier, impression réelle) — tout a été vérifié seulement en headless.
   Pour revenir en arrière si besoin : `git revert -m 1 0274553` (ou repartir de
-  `a533e25`, l'ancienne `main`). Pages met 1–2 min à se mettre à jour après un
-  push ; `localStorage` est propre à chaque adresse (les fiches enregistrées sur
+  `a533e25`, l'ancienne `main`). Mise en ligne vérifiée le 2026-09-21 : build
+  Pages « built » et `index.html`, `js/preview-editor.js`, `js/history.js` servis
+  (HTTP 200). Pages met 1–2 min à se mettre à jour après un push. **L'URL est
+  sensible à la casse** : `…/Fiche-ecriture/` (F majuscule) fonctionne,
+  `…/fiche-ecriture/` renvoie 404 ; `localStorage` est propre à chaque adresse (les fiches enregistrées sur
   `localhost` ou `file://` n'apparaissent pas sur le site en ligne).
 
 ## Quoi
