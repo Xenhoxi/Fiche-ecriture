@@ -24,3 +24,38 @@
   src: url('dancing-script.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122;
 }
+
+/* Marelle — Ministère de l'Éducation nationale (licence SIL OFL 1.1, voir LICENSE-Marelle.txt).
+   Sans les variantes "LIGNES" : la réglure est dessinée par le site (js/dotted-text.js)
+   avec les mêmes proportions que ces polices, pour pouvoir pointiller les lettres. */
+@font-face {
+  font-family: 'Marelle';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('marelle.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Marelle 2';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('marelle-2.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Marelle Baton';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('marelle-baton.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Marelle Baton 2';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('marelle-baton-2.woff2') format('woff2');
+}

@@ -46,19 +46,14 @@ FE.DottedText = (function () {
   // mot, sans empêcher de le lire.
   function drawRulingLines(svg, availableWidthMm, metrics) {
     var color = "#2f5fa8";
-    [
-      { y: metrics.topY, width: 0.16, dash: "1.4,1.3" },
-      { y: metrics.coreTopY, width: 0.16, dash: "1.4,1.3" },
-      { y: metrics.baselineY, width: 0.38, dash: null },
-      { y: metrics.bottomY, width: 0.16, dash: "1.4,1.3" }
-    ].forEach(function (spec) {
+    metrics.lines.forEach(function (spec) {
       var attrs = {
         x1: 0, y1: spec.y, x2: availableWidthMm, y2: spec.y,
         stroke: color,
-        "stroke-width": spec.width,
+        "stroke-width": spec.baseline ? 0.38 : 0.16,
         "stroke-linecap": "round"
       };
-      if (spec.dash) attrs["stroke-dasharray"] = spec.dash;
+      if (!spec.baseline) attrs["stroke-dasharray"] = "1.4,1.3";
       svg.appendChild(el("line", attrs));
     });
   }
@@ -99,10 +94,15 @@ FE.DottedText = (function () {
   // getComputedTextLength() renvoie une mesure correcte).
   function layoutLine(container, text, resolved, availableWidthMm, rowHeightMm, metrics) {
     var font = FE.Fonts.getById(resolved.fontId);
-    var fontSizeMm = resolved.fontSizeMm * 1.35; // ajustement visuel corps de lettre vs em SVG
+    var fontSizeMm = resolved.fontSizeMm * FE.Render.FONT_SCALE; // ajustement visuel corps de lettre vs em SVG
     var repetitions = Math.max(1, resolved.repetitions);
     var strokeWidthMm = Math.max(0.2, resolved.dashSizeMm * 0.28);
+    // Marelle est à trait fin et régulier : un contour de 0,5 mm y fusionne
+    // les deux bords du trait en un bloc illisible, on l'affine donc.
+    if (font.ruling) strokeWidthMm = Math.min(strokeWidthMm, fontSizeMm * 0.02);
     var dashArray = (resolved.dashSizeMm * 1.1).toFixed(2) + "," + (resolved.dashSizeMm * 0.75).toFixed(2);
+
+    var italic = resolved.fontStyle === "italic" && FE.Fonts.supportsItalic(resolved.fontId);
 
     var svg = createLineSvg(container, availableWidthMm, rowHeightMm);
 
@@ -112,7 +112,7 @@ FE.DottedText = (function () {
     }
 
     // Mesure la largeur réelle du mot dans la police/taille active.
-    var measurer = makeTextNode(text, 0, metrics.baselineY, font.family, fontSizeMm, resolved.fontStyle === "italic", "solid");
+    var measurer = makeTextNode(text, 0, metrics.baselineY, font.family, fontSizeMm, italic, "solid");
     svg.appendChild(measurer);
     var wordWidth = 0;
     try {
@@ -139,7 +139,7 @@ FE.DottedText = (function () {
       // jamais centré dans son emplacement — seules les occurrences à
       // repasser sont centrées dans le leur.
       var x = i === 0 ? 0 : (i * slotWidth + startPadding);
-      var node = makeTextNode(text, x, metrics.baselineY, font.family, fontSizeMm, resolved.fontStyle === "italic", mode, strokeWidthMm, dashArray);
+      var node = makeTextNode(text, x, metrics.baselineY, font.family, fontSizeMm, italic, mode, strokeWidthMm, dashArray);
       svg.appendChild(node);
     }
 

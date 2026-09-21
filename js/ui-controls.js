@@ -104,7 +104,11 @@ FE.UI = (function () {
     var fontSelect = document.createElement("select");
     populateFontSelect(fontSelect);
     fontSelect.value = values.fontId;
-    fontSelect.addEventListener("change", function () { onChange("fontId", fontSelect.value); });
+    var italicField = null;
+    fontSelect.addEventListener("change", function () {
+      if (italicField) italicField.hidden = !FE.Fonts.supportsItalic(fontSelect.value);
+      onChange("fontId", fontSelect.value);
+    });
     fontField.appendChild(fontLabel);
     fontField.appendChild(fontSelect);
     container.appendChild(fontField);
@@ -121,9 +125,11 @@ FE.UI = (function () {
       min: 0.8, max: 5, step: 0.2, value: values.dashSizeMm, unit: "mm"
     }, function (v) { onChange("dashSizeMm", v); }));
 
-    container.appendChild(buildToggleField("Italique", values.fontStyle === "italic", function (checked) {
+    italicField = buildToggleField("Italique", values.fontStyle === "italic", function (checked) {
       onChange("fontStyle", checked ? "italic" : "normal");
-    }));
+    });
+    italicField.hidden = !FE.Fonts.supportsItalic(values.fontId);
+    container.appendChild(italicField);
   }
 
   // ---- Réglages globaux ----

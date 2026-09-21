@@ -19,7 +19,27 @@ FE.Render = (function () {
   // descendre pour les jambages). Proportionnelle à la taille choisie ;
   // chaque ligne est autonome (pas de grille de page à recaler), donc la
   // hauteur suit directement et continûment la taille de police.
-  function computeRowMetrics(fontSizeMm) {
+  //
+  // Pour les polices Marelle (font.ruling === "marelle"), la réglure suit
+  // celle des variantes "LIGNES" officielles : 6 lignes espacées de 0,48 em
+  // (une x-height), base = 4e ligne (1,44 em depuis le haut).
+  // Rapport corps de lettre / em SVG, partagé avec FE.DottedText.
+  var FONT_SCALE = 1.35;
+
+  function computeRowMetrics(fontSizeMm, font) {
+    if (font && font.ruling === "marelle") {
+      var em = fontSizeMm * FONT_SCALE;
+      var step = em * 0.48;
+      var lines = [];
+      for (var i = 0; i < 6; i++) lines.push({ y: i * step, baseline: i === 3 });
+      return {
+        topY: 0,
+        baselineY: step * 3,
+        bottomY: step * 5,
+        lines: lines,
+        rowHeightMm: step * 5 + Math.max(1.5, fontSizeMm * 0.3)
+      };
+    }
     var ascenderH = fontSizeMm * 1.0;
     var descenderH = fontSizeMm * 0.55;
     var gapH = Math.max(1.5, fontSizeMm * 0.3);
@@ -28,6 +48,12 @@ FE.Render = (function () {
       coreTopY: ascenderH * 0.5,
       baselineY: ascenderH,
       bottomY: ascenderH + descenderH,
+      lines: [
+        { y: 0 },
+        { y: ascenderH * 0.5 },
+        { y: ascenderH, baseline: true },
+        { y: ascenderH + descenderH }
+      ],
       rowHeightMm: ascenderH + descenderH + gapH
     };
   }
@@ -82,7 +108,7 @@ FE.Render = (function () {
     } else {
       sheet.lines.forEach(function (line) {
         var resolved = FE.Model.resolveLineSettings(sheet, line);
-        var metrics = computeRowMetrics(resolved.fontSizeMm);
+        var metrics = computeRowMetrics(resolved.fontSizeMm, FE.Fonts.getById(resolved.fontId));
 
         var row = document.createElement("div");
         row.className = "ligne-ecriture";
@@ -98,6 +124,7 @@ FE.Render = (function () {
 
   return {
     PAGE: PAGE,
+    FONT_SCALE: FONT_SCALE,
     computeRowMetrics: computeRowMetrics,
     renderSheet: renderSheet
   };

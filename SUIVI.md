@@ -1,7 +1,7 @@
 # Suivi de projet — Fiche-Écriture
 
 > Fichier de reprise de session. À lire en premier avant toute nouvelle modification.
-> Dernière mise à jour : 2026-09-20.
+> Dernière mise à jour : 2026-09-21.
 
 ## Quoi
 
@@ -12,7 +12,7 @@ répétitions en pointillé à repasser). Sauvegarde locale (localStorage),
 export PDF via impression navigateur. Fonctionne hors-ligne (polices
 embarquées en `.woff2`).
 
-Pas de dépôt git initialisé sur ce projet. Deux images de référence fournies
+Dépôt git + GitHub Pages : https://github.com/Xenhoxi/fiche-ecriture → https://xenhoxi.github.io/fiche-ecriture/ (branche `main`, déploiement à chaque `git push`). Deux images de référence fournies
 par l'utilisateur restent à la racine (`Exemple ligne.jpeg`,
 `fiche actuelle.jpeg`) — pures références visuelles, pas utilisées par le
 code, à garder sauf demande contraire.
@@ -32,7 +32,7 @@ js/dotted-text.js            FE.DottedText — génère le SVG de chaque ligne (
 js/render.js                  FE.Render — construit le DOM de la fiche, calcule les métriques de ligne
 js/ui-controls.js              FE.UI — sidebar, binding des événements
 js/main.js                      bootstrap, mise à l'échelle responsive de l'aperçu
-fonts/                            .woff2 embarqués + fonts.css + LICENSES.txt
+fonts/                            .woff2 embarqués + fonts.css + LICENSES.txt + LICENSE-Marelle.txt
 ```
 
 Scripts classiques (`<script src="...">`, PAS de `type="module"`) — exprès,
@@ -109,6 +109,33 @@ Bug trouvé et corrigé : une règle CSS dans `sheet.css`
 properties n'étaient jamais définies nulle part. Supprimé de la CSS — ne
 JAMAIS remettre de `font-family`/`font-style` sur `.ligne-ecriture text`.
 
+### Polices Marelle (ajoutées 2026-09-21)
+
+4 polices du Ministère (SIL OFL) : Marelle, Marelle 2 (hampes courtes),
+Marelle Bâton, Marelle Bâton 2. Police par défaut des nouvelles fiches.
+Sources `.ttf`/`.otf` + PDF spécimen dans `marelle-ttf/` et
+`Marelle_Specimen.pdf` (ignorés par git, non utilisés par le code).
+
+- **On n'utilise PAS les variantes `LIGNES`** (réglure incluse dans le glyphe) :
+  lettre et lignes y sont fusionnées en un seul contour, donc impossible
+  de pointiller la lettre sans pointiller les lignes. On charge les
+  polices sans lignes et `drawRulingLines()` trace la réglure avec les
+  mêmes proportions, relevées dans les LIGNES (upm 2000) : 6 lignes à
+  +2880/+1920/+960/**0**/-960/-1920, soit un pas de 0,48 em = x-height ;
+  la base (0) est la 4e ligne, seule pleine.
+- `FE.Fonts.catalog` : `ruling: "marelle"` déclenche cette réglure dans
+  `computeRowMetrics(fontSizeMm, font)` (hauteur de ligne = 2,4 em + gap) ;
+  `italic: false` masque le toggle Italique et force `normal`.
+  Polices sans `ruling` (Caveat, etc.) gardent l'ancienne réglure à 4 repères.
+- `FONT_SCALE = 1.35` (`FE.Render`) : em = Taille × 1.35, comme avant.
+- Contour pointillé des polices `ruling` : épaisseur plafonnée à
+  `em × 0.02`, sinon les 2 bords du trait fin fusionnent en bloc illisible.
+- `main.js` `reloadIfFontsPending` : une police n'est téléchargée qu'à son
+  premier usage → re-rendu après `document.fonts.load`, sinon la mesure
+  du mot (fallback) fait chevaucher les répétitions.
+- Rendu Caveat en contour pointillé : semble très chargé (constaté
+  2026-09-21, non modifié).
+
 ### UI (`ui-controls.js`)
 
 - Réglages globaux et personnalisation par ligne partagent le même
@@ -152,7 +179,6 @@ JAMAIS remettre de `font-family`/`font-style` sur `.ligne-ecriture text`.
   simulation CSS. Un test réel par l'utilisateur serait utile.
 - Pas de suite de tests automatisés, tout est vérifié manuellement à chaque
   session.
-- Pas de dépôt git — à proposer si l'utilisateur veut un historique.
 
 ## Pour reprendre demain
 

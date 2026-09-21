@@ -10,7 +10,7 @@ FE.Model = (function () {
 
   function createDefaultSettings() {
     return {
-      fontId: "caveat",
+      fontId: "marelle",
       fontSizeMm: 8,
       fontStyle: "normal", // "normal" | "italic"
       repetitions: 6,

@@ -43,6 +43,29 @@ window.FE = window.FE || {};
     function rerenderPreview(sheet) {
       FE.Render.renderSheet(sheet, previewEl);
       updatePreviewScale();
+      reloadIfFontsPending(sheet);
+    }
+
+    // Une police n'est téléchargée qu'à sa première utilisation : si on vient
+    // de la choisir, la mesure du rendu ci-dessus a utilisé une police de
+    // repli. On force son chargement puis on refait le rendu une fois prête.
+    function reloadIfFontsPending(sheet) {
+      if (!document.fonts || !document.fonts.load) return;
+      var ids = [sheet.settings.fontId].concat(sheet.lines.map(function (l) {
+        return (l.overrides && l.overrides.fontId) || sheet.settings.fontId;
+      }));
+      var pending = ids.filter(function (id, i) {
+        return ids.indexOf(id) === i && !document.fonts.check("16px '" + FE.Fonts.getById(id).family + "'");
+      });
+      if (!pending.length) return;
+      Promise.all(pending.map(function (id) {
+        return document.fonts.load("16px '" + FE.Fonts.getById(id).family + "'");
+      })).then(function () {
+        if (appState.sheet === sheet) {
+          FE.Render.renderSheet(sheet, previewEl);
+          updatePreviewScale();
+        }
+      }).catch(function () {});
     }
 
     FE.UI.init(appState, rerenderPreview);

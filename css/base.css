@@ -260,3 +260,7 @@ label {
 .toggle-label-text {
   font-weight: 500;
 }
+
+.toggle-field[hidden] {
+  display: none;
+}
