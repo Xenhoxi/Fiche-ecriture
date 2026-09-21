@@ -324,9 +324,12 @@
   .fiche-bloc {
     user-select: none;
   }
-  /* Pendant la saisie sur place, le mot modèle est masqué : c'est le champ de
-     saisie (transparent, mêmes police et position) qui le remplace. */
-  .fiche-bloc.is-editing .ligne-ecriture:first-child text:first-of-type {
+  /* Pendant la saisie sur place, TOUT l'ancien texte du bloc (modèle et
+     répétitions, en plein, contour ou trait central pointillé) est masqué :
+     il ne reste que la réglure, et le champ de saisie (transparent, mêmes
+     police et position) montre seul ce qu'on tape. */
+  .fiche-bloc.is-editing .ligne-ecriture text,
+  .fiche-bloc.is-editing .ligne-ecriture path {
     visibility: hidden;
   }
   .fiche-name-heading,

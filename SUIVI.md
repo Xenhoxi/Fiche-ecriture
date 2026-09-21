@@ -136,8 +136,10 @@ auto). Reste : validation par l'utilisateur, puis merge dans `main` (non fait).
     superposé au mot modèle (texte brut). Entrée valide, Échap annule, changer
     de bloc / cliquer ailleurs enregistre. Titre et consigne : clic direct ;
     lien « + Consigne » (écran seulement) quand elle est vide ; consigne
-    multiligne : Ctrl+Entrée valide. Le mot modèle SVG est masqué pendant la
-    saisie (`.is-editing`), le champ est semi-transparent (réglure visible).
+    multiligne : Ctrl+Entrée valide. TOUT l'ancien texte du bloc (modèle +
+    répétitions, `text` et `path` SVG, tous les fragments/rangées) est masqué
+    pendant la saisie (`.is-editing`) ; le champ est semi-transparent (réglure
+    visible).
   - **Ne pas utiliser `<input>`/`<textarea>`** : Chrome rogne leur texte à la
     zone de contenu (jambages coupés). La ligne de base du champ est calée par
     `canvasMetrics()` + `line-height` (demi-interligne) dans `editorGeometry()`.

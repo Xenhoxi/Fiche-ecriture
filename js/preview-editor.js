@@ -328,8 +328,7 @@ FE.PreviewEditor = (function () {
     el.textContent = currentValue(kind, id);
     editing = { kind: kind, id: id, el: el, done: false, multiline: multiline };
     if (kind === "line") {
-      var b0 = blocksOf(id)[0];
-      if (b0) b0.classList.add("is-editing");
+      blocksOf(id).forEach(function (b) { b.classList.add("is-editing"); });
     }
     layerEl.appendChild(el);
     positionEditor();
