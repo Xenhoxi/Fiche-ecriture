@@ -186,6 +186,35 @@
   overflow: auto;
 }
 
+/* Cadre qui porte l'aperçu et la couche de sélection (superposée, hors des
+   pages : jamais imprimée, sans effet sur la mise en page de la fiche). */
+.preview-stage {
+  position: relative;
+}
+
+#selection-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.selection-box {
+  position: absolute;
+  border: 2px solid var(--color-accent);
+  border-radius: 4px;
+  background: rgba(79, 109, 245, 0.06);
+}
+
+@media screen {
+  .fiche-bloc {
+    cursor: pointer;
+  }
+  .fiche-bloc:hover {
+    outline: 1.5px dashed var(--color-border-strong);
+    outline-offset: 1mm;
+  }
+}
+
 @media (max-width: 900px) {
   .app-layout {
     flex-direction: column;

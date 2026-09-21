@@ -12,7 +12,7 @@ window.FE = window.FE || {};
 
     // Mise à l'échelle responsive : la fiche est dimensionnée en mm
     // physiques (210mm de large) et déborderait sur un petit écran. On la
-    // réduit visuellement via transform: scale() sur .fiche-page, tout en
+    // réduit visuellement via transform: scale() sur .fiche-pages, tout en
     // réservant sur #fiche-preview exactement l'empreinte réduite (sinon
     // le transform, purement visuel, laisserait un vide en dessous/à droite
     // correspondant à la taille non réduite). Se fait APRÈS la mesure du
@@ -20,8 +20,8 @@ window.FE = window.FE || {};
     // sur la mise en page interne de la fiche ni sur l'impression (voir
     // print.css qui réinitialise ce transform).
     function updatePreviewScale() {
-      var page = previewEl.querySelector(".fiche-page");
-      var wrapper = previewEl.parentElement;
+      var page = previewEl.querySelector(".fiche-pages");
+      var wrapper = previewEl.closest(".preview-wrapper");
       if (!page || !wrapper) return;
 
       page.style.transform = "";
@@ -43,6 +43,7 @@ window.FE = window.FE || {};
     function rerenderPreview(sheet) {
       FE.Render.renderSheet(sheet, previewEl);
       updatePreviewScale();
+      FE.PreviewEditor.refresh();
       reloadIfFontsPending(sheet);
     }
 
@@ -64,10 +65,12 @@ window.FE = window.FE || {};
         if (appState.sheet === sheet) {
           FE.Render.renderSheet(sheet, previewEl);
           updatePreviewScale();
+          FE.PreviewEditor.refresh();
         }
       }).catch(function () {});
     }
 
+    FE.PreviewEditor.init(previewEl, document.getElementById("selection-layer"), function () { return appState.sheet; });
     FE.UI.init(appState, rerenderPreview);
 
     // Les polices embarquées (@font-face) se chargent de façon asynchrone.
@@ -84,7 +87,10 @@ window.FE = window.FE || {};
     var resizeTimer = null;
     window.addEventListener("resize", function () {
       if (resizeTimer) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(updatePreviewScale, 120);
+      resizeTimer = setTimeout(function () {
+        updatePreviewScale();
+        FE.PreviewEditor.refresh();
+      }, 120);
     });
   });
 })();

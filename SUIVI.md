@@ -28,6 +28,8 @@ css/sheet.css            page imprimable (.fiche-page), conteneur de ligne (.lig
 js/model.js               FE.Model — modèle de données, defaults, validation/migration
 js/fonts-catalog.js        FE.Fonts — catalogue polices (Caveat, Patrick Hand, Dancing Script)
 js/storage.js               FE.Storage — CRUD localStorage des fiches
+js/skeleton.js                 FE.Skeleton — ligne centrale des lettres (pointillé simple)
+js/preview-editor.js            FE.PreviewEditor — sélection d'un bloc sur l'aperçu (couche #selection-layer)
 js/dotted-text.js            FE.DottedText — génère le SVG de chaque ligne (mots + repères de réglure)
 js/render.js                  FE.Render — construit le DOM de la fiche, calcule les métriques de ligne
 js/ui-controls.js              FE.UI — sidebar, binding des événements
@@ -106,6 +108,28 @@ par l'utilisateur et annulée.
   au lieu d'être collées à gauche avec un vide à droite. Pour annuler
   seulement ça : `git revert -m 1 e5bed45` (ou repartir de `c68b0ea`,
   Marelle seul). La branche `repartition-repetitions` existe aussi.
+
+### Refonte « édition sur l'aperçu » — branche `edition-sur-apercu` (plan : `~/.claude/plans/pasted-content-id-6291-q2-velvet-pearl.md`)
+
+Objectif : éditer directement sur l'aperçu façon Notion. 4 étapes, un commit
+chacune, `main` intact jusqu'à validation. **Étape 1 faite** (blocs, pages
+multiples, sélection). À faire : 2 édition sur place + barre flottante (panneau
+gauche réduit), 3 glisser-déposer + ajout/suppression au survol, 4
+annuler/rétablir + brouillon auto.
+
+- `renderSheet` produit `.fiche-pages` > N `.fiche-page` (210×297mm fixes) >
+  `.fiche-bloc[data-line-id]` > `.ligne-ecriture`. Titre + consigne en page 1
+  seulement (hauteur mesurée dans le DOM). Un bloc n'est jamais coupé ; s'il est
+  plus grand qu'une page il est coupé rangée par rangée (plusieurs `.fiche-bloc`
+  avec le même id). Hauteur utile 267mm ; rangée = `rowHeightMm` + 1mm.
+- Sélection : clic sur un bloc → cadre dans `#selection-layer` (frère de
+  `#fiche-preview` dans `.preview-stage`, `.no-print`, jamais imprimé).
+  `FE.PreviewEditor.refresh()` est rappelé après chaque rendu/redimensionnement.
+  Échap ou clic hors bloc désélectionne.
+- `main.js` : la mise à l'échelle porte sur `.fiche-pages` (le conteneur de
+  toutes les pages). Impression : `break-after: page`, testée par un vrai
+  `--print-to-pdf` Chrome (pas seulement la simulation CSS).
+- Le panneau gauche est encore complet (réduit à l'étape 2).
 
 ### Retour à la ligne et nombre de lignes (2026-09-21, non commité)
 

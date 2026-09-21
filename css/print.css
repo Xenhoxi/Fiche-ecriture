@@ -29,12 +29,24 @@
     height: auto !important;
   }
 
+  .fiche-pages {
+    display: block;
+    gap: 0;
+    transform: none !important;
+  }
+
   .fiche-page {
     box-shadow: none;
     margin: 0;
     width: 210mm;
-    min-height: 297mm;
-    transform: none !important;
+    height: 297mm;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .fiche-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 
   .ligne-ecriture {
