@@ -5,7 +5,7 @@
 
 ## État du dépôt — À LIRE EN PREMIER
 
-- **`main`** (= `origin/main`, GitHub Pages : https://xenhoxi.github.io/fiche-ecriture/) :
+- **`main`** (= `origin/main`, GitHub Pages : https://xenhoxi.github.io/Fiche-ecriture/) :
   contient MAINTENANT la refonte « édition directe sur l'aperçu » (fusion
   `0274553` de `edition-sur-apercu`, faite sur demande explicite de l'utilisateur
   le 2026-09-21 pour pouvoir la tester en ligne), en plus du retour à la ligne, du
@@ -34,7 +34,7 @@ répétitions en pointillé à repasser). Sauvegarde locale (localStorage),
 export PDF via impression navigateur. Fonctionne hors-ligne (polices
 embarquées en `.woff2`).
 
-Dépôt git (branche `main`) + GitHub Pages : https://github.com/Xenhoxi/fiche-ecriture → https://xenhoxi.github.io/fiche-ecriture/ (branche `main`, déploiement à chaque push sur `main`). Deux images de référence fournies
+Dépôt git (branche `main`) + GitHub Pages : https://github.com/Xenhoxi/fiche-ecriture → https://xenhoxi.github.io/Fiche-ecriture/ (branche `main`, déploiement à chaque push sur `main`). Deux images de référence fournies
 par l'utilisateur restent à la racine (`Exemple ligne.jpeg`,
 `fiche actuelle.jpeg`) — pures références visuelles, pas utilisées par le
 code, à garder sauf demande contraire.
