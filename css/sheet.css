@@ -1,0 +1,88 @@
+:root {
+  --page-margin: 15mm 12mm;
+}
+
+.preview-wrapper {
+  background: #d9dee5;
+  padding: 20px;
+  border-radius: var(--radius);
+}
+
+.fiche-page {
+  width: 210mm;
+  min-height: 297mm;
+  background-color: #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  padding: var(--page-margin);
+  margin: 0 auto;
+}
+
+.fiche-consigne {
+  margin: 0 0 6mm 0;
+  padding: 3mm 4mm;
+  background: #f4f7fb;
+  border: 1px solid #c9d6e5;
+  border-radius: 3mm;
+  font-family: system-ui, sans-serif;
+}
+
+.fiche-consigne-title {
+  font-size: 3.2mm;
+  font-weight: 700;
+  color: #2f5883;
+  margin: 0 0 1mm 0;
+}
+
+.fiche-consigne-text {
+  font-size: 3.2mm;
+  color: #333;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.fiche-name-heading {
+  margin: 0 0 4mm 0;
+  font-size: 4mm;
+  font-weight: 700;
+  color: #333;
+  font-family: system-ui, sans-serif;
+}
+
+.ligne-ecriture {
+  position: relative;
+  break-inside: avoid;
+  margin: 0 0 1mm 0;
+  /* Les repères de réglure (ligne fine en haut, épaisse à la base, fine en
+     bas) sont dessinés par FE.DottedText DANS le SVG, par-dessus le texte
+     — voir drawRulingLines dans js/dotted-text.js — pas ici en fond, pour
+     qu'ils restent visibles même là où le mot modèle est plein. */
+
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.ligne-ecriture svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.ligne-ecriture text {
+  /* La police et le style (italique) sont posés directement en attributs
+     SVG par FE.DottedText selon la ligne — ne pas les fixer ici, sous peine
+     d'écraser systématiquement ce choix (un attribut de présentation SVG a
+     une spécificité plus faible qu'une règle de feuille de style auteur). */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  shape-rendering: geometricPrecision;
+}
+
+.fiche-empty-hint {
+  font-family: system-ui, sans-serif;
+  color: #9aa2ad;
+  font-style: italic;
+  font-size: 3.5mm;
+  padding: 8mm 0;
+  text-align: center;
+}

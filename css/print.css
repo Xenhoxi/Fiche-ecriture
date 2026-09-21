@@ -1,0 +1,43 @@
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  html, body {
+    background: #fff;
+    height: auto;
+  }
+
+  .main-area {
+    padding: 0;
+    display: block;
+  }
+
+  .preview-wrapper {
+    background: none;
+    padding: 0;
+    overflow: visible;
+  }
+
+  #fiche-preview {
+    width: auto !important;
+    height: auto !important;
+  }
+
+  .fiche-page {
+    box-shadow: none;
+    margin: 0;
+    width: 210mm;
+    min-height: 297mm;
+    transform: none !important;
+  }
+
+  .ligne-ecriture {
+    break-inside: avoid;
+  }
+}

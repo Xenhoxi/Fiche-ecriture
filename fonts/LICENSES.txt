@@ -1,0 +1,15 @@
+Polices embarquées dans ce projet — toutes sous licence SIL Open Font License 1.1 (OFL)
+Texte complet de la licence : https://openfontlicense.org/
+
+- Caveat (Pablo Impallari, Brenda Gallo) — fichier caveat.woff2
+  https://fonts.google.com/specimen/Caveat
+
+- Patrick Hand (Patrick Wagesreiter) — fichier patrick-hand.woff2
+  https://fonts.google.com/specimen/Patrick+Hand
+
+- Dancing Script (Pablo Impallari) — fichier dancing-script.woff2
+  https://fonts.google.com/specimen/Dancing+Script
+
+Ces polices peuvent être utilisées, modifiées et redistribuées librement,
+y compris dans un usage commercial, sous réserve du respect de la licence OFL
+(notamment : ne pas vendre la police seule, conserver les mentions de licence).

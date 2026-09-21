@@ -1,0 +1,262 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --color-bg: #f3f4f7;
+  --color-panel: #ffffff;
+  --color-border: #e2e5ea;
+  --color-border-strong: #cbd1db;
+  --color-text: #1c2029;
+  --color-muted: #6b7280;
+  --color-accent: #4f6df5;
+  --color-accent-hover: #3d59e0;
+  --color-accent-soft: #eef1fe;
+  --color-danger: #d1453b;
+  --color-danger-soft: #fdecea;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --sidebar-width: 400px;
+  --shadow-card: 0 1px 2px rgba(20, 24, 33, 0.04), 0 1px 1px rgba(20, 24, 33, 0.03);
+  --font-sans: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  margin: 0 0 0.5em 0;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+button {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-panel);
+  color: var(--color-text);
+  border-radius: var(--radius-sm);
+  padding: 7px 13px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.05s ease;
+}
+
+button:hover {
+  background: #f5f6f9;
+  border-color: var(--color-border-strong);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button.primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
+button.primary:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+button.danger {
+  color: var(--color-danger);
+}
+
+button.danger:hover {
+  background: var(--color-danger-soft);
+  border-color: #f0b8b3;
+}
+
+button.small {
+  padding: 4px 9px;
+  font-size: 12px;
+  border-radius: 7px;
+}
+
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--color-text);
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 3.5em;
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+  margin-bottom: 5px;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field-row {
+  display: flex;
+  gap: 8px;
+}
+
+.field-row > .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-layout {
+  display: flex;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+.empty-state {
+  color: var(--color-muted);
+  font-style: italic;
+  font-size: 12px;
+  padding: 8px 0;
+}
+
+/* ---- Slider (taille, répétitions) ---- */
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-border-strong);
+  outline: none;
+}
+
+.slider-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--color-accent);
+  cursor: pointer;
+}
+
+.slider-row input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--color-accent);
+  cursor: pointer;
+}
+
+.slider-output {
+  min-width: 3.4em;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Interrupteur (italique) ---- */
+
+.toggle-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-text);
+  margin-bottom: 14px;
+  user-select: none;
+}
+
+.toggle-field input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-track {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  flex: 0 0 auto;
+  background: var(--color-border-strong);
+  border-radius: 999px;
+  transition: background 0.15s ease;
+}
+
+.toggle-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.toggle-field input:checked + .toggle-track {
+  background: var(--color-accent);
+}
+
+.toggle-field input:checked + .toggle-track::after {
+  transform: translateX(14px);
+}
+
+.toggle-field input:focus-visible + .toggle-track {
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.toggle-label-text {
+  font-weight: 500;
+}

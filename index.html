@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fiches d'écriture</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/editor.css">
+<link rel="stylesheet" href="css/sheet.css">
+<link rel="stylesheet" href="css/print.css">
+</head>
+<body>
+
+<div class="app-layout">
+
+  <aside class="sidebar no-print">
+    <h1>Fiches d'écriture</h1>
+
+    <section>
+      <div class="field">
+        <label for="field-sheet-name">Nom de la fiche</label>
+        <input type="text" id="field-sheet-name">
+      </div>
+      <div class="field">
+        <label for="field-consigne">Consigne / technique à utiliser (affichée en haut de la fiche)</label>
+        <textarea id="field-consigne" placeholder="Ex : Tiens bien ton crayon, repasse sur les pointillés sans lever la main."></textarea>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-title">Réglages par défaut de la fiche</div>
+      <div id="global-settings"></div>
+    </section>
+
+    <section>
+      <div class="section-title">Lignes de la fiche</div>
+      <div id="lines-list"></div>
+      <button type="button" id="btn-add-line" class="add-line-btn">+ Ajouter une ligne</button>
+    </section>
+
+    <section>
+      <div class="section-title">Mes fiches sauvegardées</div>
+      <div class="top-actions">
+        <button type="button" id="btn-new">Nouvelle fiche</button>
+        <button type="button" id="btn-save" class="primary">Enregistrer</button>
+      </div>
+      <div id="saved-sheets-list"></div>
+    </section>
+
+    <section>
+      <button type="button" id="btn-print" class="primary print-btn">Imprimer / Exporter en PDF</button>
+    </section>
+  </aside>
+
+  <main class="main-area">
+    <div class="preview-wrapper">
+      <div id="fiche-preview"></div>
+    </div>
+  </main>
+
+</div>
+
+<script src="js/model.js"></script>
+<script src="js/fonts-catalog.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/dotted-text.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui-controls.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
