@@ -22,6 +22,7 @@ FE.PreviewEditor = (function () {
   var barEl = null;
   var getSheet = null;
   var onChange = null;
+  var onLiveRender = null;   // redessine la page sans créer de pas d'annulation
 
   var selectedLineId = null;
   var barLineId = null;      // ligne dont la barre affiche actuellement les réglages
@@ -63,6 +64,10 @@ FE.PreviewEditor = (function () {
     var o = layerEl.getBoundingClientRect();
     var r = el.getBoundingClientRect();
     return { left: r.left - o.left, top: r.top - o.top, width: r.width, height: r.height };
+  }
+
+  function renderLive() {
+    onLiveRender();
   }
 
   function renderOptions() {
@@ -278,12 +283,23 @@ FE.PreviewEditor = (function () {
     var cs = getComputedStyle(target);
     var tr = relRect(target);
     var px = parseFloat(cs.fontSize) * scale;
-    var pad = 4;
+    // Le champ épouse exactement la zone du texte (bordure 2px + padding 4px
+    // en plus), pour que les retours à la ligne tombent aux mêmes endroits.
+    var edge = 4 + 2;
     return {
-      left: tr.left - pad, top: tr.top - pad, width: tr.width + pad * 2, height: Math.max(tr.height, px * 1.4) + pad * 2,
+      left: tr.left - edge, top: tr.top - edge, width: tr.width + edge * 2, height: Math.max(tr.height, px * 1.4) + edge * 2,
       family: cs.fontFamily, fontPx: px, fontStyle: "normal", fontWeight: cs.fontWeight,
-      lineHeight: e.kind === "title" ? "1.2" : "1.4", padding: pad + "px"
+      lineHeight: e.kind === "title" ? "1.2" : "1.4", padding: "4px", grow: true
     };
+  }
+
+  // Titre / consigne : pendant la saisie, l'ancien texte de la page est masqué
+  // (sinon il transparaît sous le champ) ; le nouveau est répercuté en direct
+  // sur la page, qui se réagence (la consigne peut prendre plusieurs lignes).
+  function markEditingTarget() {
+    if (!editing || editing.kind === "line") return;
+    var t = previewEl.querySelector(editing.kind === "title" ? ".fiche-name-heading" : ".fiche-consigne");
+    if (t) t.classList.add("is-editing");
   }
 
   function positionEditor() {
@@ -293,13 +309,16 @@ FE.PreviewEditor = (function () {
     s.left = g.left + "px";
     s.top = g.top + "px";
     s.width = g.width + "px";
-    s.height = g.height + "px";
+    // Titre / consigne : la hauteur suit le contenu (plusieurs lignes possibles).
+    s.height = g.grow ? "auto" : g.height + "px";
+    s.minHeight = g.grow ? g.height + "px" : "";
     s.fontFamily = g.family;
     s.fontSize = g.fontPx + "px";
     s.fontStyle = g.fontStyle;
     s.fontWeight = g.fontWeight;
     s.lineHeight = g.lineHeight;
     s.padding = g.padding;
+    markEditingTarget();
   }
 
   function currentValue(kind, id) {
@@ -319,14 +338,18 @@ FE.PreviewEditor = (function () {
     if (editing) finishEdit(false);
     var multiline = kind === "consigne";
     var el = document.createElement("div");
-    el.className = "inline-editor" + (multiline ? " is-multiline" : "");
+    // Titre et consigne peuvent passer à la ligne (le titre reste sur une ligne
+    // de saisie : Entrée valide toujours).
+    el.className = "inline-editor" + (kind !== "line" ? " is-multiline" : "");
     el.setAttribute("data-placeholder", kind === "line" ? "Écrivez un mot…" : (kind === "title" ? "Titre de la fiche" : "Écrivez la consigne…"));
     el.contentEditable = "plaintext-only";
     var plain = el.contentEditable === "plaintext-only";
     if (!plain) el.contentEditable = "true"; // navigateurs sans plaintext-only
     el.spellcheck = false;
     el.textContent = currentValue(kind, id);
-    editing = { kind: kind, id: id, el: el, done: false, multiline: multiline };
+    editing = { kind: kind, id: id, el: el, done: false, multiline: multiline, original: el.textContent };
+    // La zone de consigne doit rester affichée même si on efface tout le texte.
+    if (kind === "consigne") addingConsigne = true;
     if (kind === "line") {
       blocksOf(id).forEach(function (b) { b.classList.add("is-editing"); });
     }
@@ -341,9 +364,18 @@ FE.PreviewEditor = (function () {
 
     el.addEventListener("keydown", function (e) {
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finishEdit(true); }
-      else if (e.key === "Enter" && (!multiline || e.ctrlKey || e.metaKey)) { e.preventDefault(); e.stopPropagation(); finishEdit(false); }
-      else if (e.key === "Enter" && !plain) { e.preventDefault(); document.execCommand("insertText", false, "\n"); }
+      else if (e.key === "Enter" && (!multiline || !e.shiftKey)) {
+        // Entrée valide ; Maj+Entrée = retour à la ligne (consigne seulement).
+        e.preventDefault(); e.stopPropagation(); finishEdit(false);
+      } else if (e.key === "Enter" && !plain) { e.preventDefault(); document.execCommand("insertText", false, "\n"); }
     });
+    if (kind !== "line") {
+      el.addEventListener("input", function () {
+        var sheet = getSheet();
+        sheet[kind === "title" ? "name" : "consigne"] = readValue(el, multiline);
+        renderLive();
+      });
+    }
     if (!plain) {
       el.addEventListener("paste", function (e) {
         e.preventDefault();
@@ -354,8 +386,9 @@ FE.PreviewEditor = (function () {
     el.addEventListener("blur", function () { finishEdit(false); });
   }
 
-  // Termine l'édition en cours : `cancel` abandonne la saisie, sinon la valeur
-  // est enregistrée puis la fiche est redessinée.
+  // Termine l'édition en cours : `cancel` abandonne la saisie (titre/consigne :
+  // la valeur d'origine est rétablie), sinon la valeur est enregistrée puis la
+  // fiche est redessinée.
   function finishEdit(cancel) {
     var e = editing;
     if (!e || e.done) return;
@@ -365,23 +398,22 @@ FE.PreviewEditor = (function () {
     if (e.el.parentNode) e.el.parentNode.removeChild(e.el);
     if (e.kind === "line") {
       blocksOf(e.id).forEach(function (b) { b.classList.remove("is-editing"); });
+    } else {
+      Array.prototype.forEach.call(previewEl.querySelectorAll(".is-editing"), function (n) { n.classList.remove("is-editing"); });
     }
 
     var changed = false;
-    if (!cancel) {
-      if (e.kind === "line") {
-        var line = findLine(e.id);
-        if (line && line.text !== value) { line.text = value; changed = true; }
-      } else if (e.kind === "title") {
-        if (getSheet().name !== value) { getSheet().name = value; changed = true; }
-      } else if (getSheet().consigne !== value) {
-        getSheet().consigne = value;
-        changed = true;
-      }
+    if (e.kind === "line") {
+      var line = findLine(e.id);
+      if (!cancel && line && line.text !== value) { line.text = value; changed = true; }
+    } else {
+      // Titre / consigne : la page a déjà suivi la saisie en direct ; on fixe
+      // la valeur finale (ou l'originale si annulé) et on redessine toujours.
+      getSheet()[e.kind === "title" ? "name" : "consigne"] = cancel ? e.original : value;
+      changed = true;
     }
-    var wasAddingConsigne = addingConsigne;
     addingConsigne = false;
-    if (changed || wasAddingConsigne) onChange();
+    if (changed) onChange();
   }
 
   function addConsigne() {
@@ -638,11 +670,12 @@ FE.PreviewEditor = (function () {
     }
   }
 
-  function init(preview, layer, sheetGetter, changeCallback) {
+  function init(preview, layer, sheetGetter, changeCallback, liveRenderCallback) {
     previewEl = preview;
     layerEl = layer;
     getSheet = sheetGetter;
     onChange = changeCallback;
+    onLiveRender = liveRenderCallback || changeCallback;
 
     boxesEl = document.createElement("div");
     layerEl.appendChild(boxesEl);

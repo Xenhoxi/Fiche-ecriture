@@ -321,6 +321,17 @@
 }
 
 @media screen {
+  /* Titre / consigne en cours de saisie : l'ancien texte est masqué (le champ
+     de saisie montre seul ce qu'on tape). La place reste réservée. */
+  .fiche-name-heading.is-editing {
+    color: transparent;
+  }
+  .fiche-name-heading.is-editing .add-consigne-hint {
+    visibility: hidden;
+  }
+  .fiche-consigne.is-editing .fiche-consigne-text {
+    visibility: hidden;
+  }
   .fiche-bloc {
     user-select: none;
   }

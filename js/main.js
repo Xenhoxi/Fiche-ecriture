@@ -75,6 +75,9 @@ window.FE = window.FE || {};
     FE.PreviewEditor.init(previewEl, document.getElementById("selection-layer"), function () { return appState.sheet; }, function (key) {
       rerenderPreview(appState.sheet);
       FE.History.commit(key);
+    }, function () {
+      // Rendu en direct pendant la saisie du titre / de la consigne : pas de pas d'annulation.
+      rerenderPreview(appState.sheet);
     });
     FE.UI.init(appState, rerenderPreview);
 

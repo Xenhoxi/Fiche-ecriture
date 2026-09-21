@@ -136,10 +136,20 @@ auto). Reste : validation par l'utilisateur, puis merge dans `main` (non fait).
     superposé au mot modèle (texte brut). Entrée valide, Échap annule, changer
     de bloc / cliquer ailleurs enregistre. Titre et consigne : clic direct ;
     lien « + Consigne » (écran seulement) quand elle est vide ; consigne
-    multiligne : Ctrl+Entrée valide. TOUT l'ancien texte du bloc (modèle +
+    multiligne : Entrée valide, Maj+Entrée = retour à la ligne. TOUT l'ancien texte du bloc (modèle +
     répétitions, `text` et `path` SVG, tous les fragments/rangées) est masqué
     pendant la saisie (`.is-editing`) ; le champ est semi-transparent (réglure
     visible).
+    Titre et consigne (`kind !== "line"`) : saisie **en direct** — chaque frappe
+    met `sheet.name` / `sheet.consigne` à jour et redessine la page via le 5e
+    argument de `PreviewEditor.init` (`onLiveRender`, SANS pas d'annulation ni
+    brouillon) ; le champ a `height:auto` + `min-height` (grandit avec le
+    contenu) et épouse le padding box du texte (mêmes retours à la ligne) ;
+    l'ancien texte de la page est masqué (`.is-editing` sur `.fiche-name-heading`
+    / `.fiche-consigne`, ré-appliqué à chaque rendu par `markEditingTarget`).
+    `addingConsigne` reste vrai pendant toute la saisie (la zone ne disparaît pas
+    si on efface tout). Échap restaure la valeur d'origine (`editing.original`) ;
+    un seul pas d'annulation à la validation.
   - **Ne pas utiliser `<input>`/`<textarea>`** : Chrome rogne leur texte à la
     zone de contenu (jambages coupés). La ligne de base du champ est calée par
     `canvasMetrics()` + `line-height` (demi-interligne) dans `editorGeometry()`.
