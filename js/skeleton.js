@@ -11,9 +11,6 @@ window.FE = window.FE || {};
 FE.Skeleton = (function () {
   "use strict";
 
-  var PX_PER_MM = 12;
-  var cache = {};
-
   function thin(img, w, h) {
     // Zhang-Suen. img : Uint8Array (0/1), bord de 1 px toujours vide.
     var changed = true;
@@ -134,24 +131,34 @@ FE.Skeleton = (function () {
     return l.slice(0, -1).concat(r);
   }
 
-  // Renvoie le attribut `d` d'un <path> en mm, origine = (début du mot, ligne
-  // de base). Pas mis en cache tant que la police n'est pas chargée (mesure
-  // faussée) : un nouveau rendu suit le chargement de la police.
-  function compute(text, family, fontSizeMm, italic) {
-    var key = [text, family, fontSizeMm, italic].join("|");
-    if (cache[key] !== undefined) return cache[key];
+  // Le squelette d'un mot est calculé UNE FOIS par (texte, police, italique), à
+  // une taille de référence, en unités d'em (1 = la taille de la police) : la
+  // ligne centrale d'une lettre a la même forme à toutes les tailles. Changer
+  // la taille ne coûte donc qu'une mise à l'échelle (quelques ms) au lieu de
+  // redessiner et amincir tout le mot (jusqu'à plusieurs centaines de ms, ce
+  // qui rendait le curseur de taille saccadé).
+  var REF_EM_PX = 160;
+  var shapes = {};      // clé (texte|police|italique) -> polylignes en unités d'em
+  var pathCache = {};   // clé + taille -> attribut `d`
+  var pathCacheSize = 0;
 
-    var spec = (italic ? "italic " : "") + (fontSizeMm * PX_PER_MM) + "px '" + family + "', cursive";
+  function outline(text, family, italic) {
+    var key = [text, family, italic].join("|");
+    if (shapes[key]) return shapes[key];
+
+    var spec = (italic ? "italic " : "") + REF_EM_PX + "px '" + family + "', cursive";
+    // Police pas encore chargée : mesure faussée, on ne met pas en cache (un
+    // nouveau rendu suit le chargement de la police).
     var ready = !document.fonts || document.fonts.check(spec);
 
     var canvas = document.createElement("canvas");
     var ctx = canvas.getContext("2d");
     ctx.font = spec;
     var textW = Math.ceil(ctx.measureText(text).width);
-    var pad = Math.ceil(fontSizeMm * PX_PER_MM * 0.6);
+    var pad = Math.ceil(REF_EM_PX * 0.6);
     var w = textW + pad * 2;
-    var h = Math.ceil(fontSizeMm * PX_PER_MM * 2.4);
-    var baseline = Math.ceil(fontSizeMm * PX_PER_MM * 1.3);
+    var h = Math.ceil(REF_EM_PX * 2.4);
+    var baseline = Math.ceil(REF_EM_PX * 1.3);
     canvas.width = w;
     canvas.height = h;
     ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -168,15 +175,35 @@ FE.Skeleton = (function () {
 
     thin(img, w, h);
 
-    var d = tracePaths(img, w).map(function (p) {
-      return simplify(p, 0.8).map(function (q, n) {
+    var paths = tracePaths(img, w).map(function (p) {
+      return simplify(p, 0.8).map(function (q) {
+        return [(q[0] - pad) / REF_EM_PX, (q[1] - baseline) / REF_EM_PX];
+      });
+    });
+
+    if (ready) shapes[key] = paths;
+    return paths;
+  }
+
+  // Renvoie l'attribut `d` d'un <path> en mm, origine = (début du mot, ligne
+  // de base). `fontSizeMm` est la taille de l'em (celle du font-size SVG).
+  function compute(text, family, fontSizeMm, italic) {
+    var paths = outline(text, family, italic);
+    var key = [text, family, italic, fontSizeMm].join("|");
+    if (pathCache[key] !== undefined) return pathCache[key];
+
+    var d = paths.map(function (p) {
+      return p.map(function (q, n) {
         return (n === 0 ? "M" : "L") +
-          ((q[0] - pad) / PX_PER_MM).toFixed(2) + " " +
-          ((q[1] - baseline) / PX_PER_MM).toFixed(2);
+          (q[0] * fontSizeMm).toFixed(2) + " " + (q[1] * fontSizeMm).toFixed(2);
       }).join(" ");
     }).join(" ");
 
-    if (ready) cache[key] = d;
+    if (shapes[[text, family, italic].join("|")]) {
+      if (pathCacheSize > 400) { pathCache = {}; pathCacheSize = 0; }
+      pathCache[key] = d;
+      pathCacheSize++;
+    }
     return d;
   }
 

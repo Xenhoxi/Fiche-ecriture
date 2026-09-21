@@ -235,11 +235,15 @@ auto). Reste : validation par l'utilisateur, puis merge dans `main` (non fait).
 - `dotStyle` (toggle « Pointillés doubles », global + par ligne), défaut
   `"single"`. `"double"` = ancien rendu (contour du glyphe pointillé, donc
   2 traits par jambage). `"single"` = un seul trait pointillé au centre.
-- `js/skeleton.js` (`FE.Skeleton.compute`) : mot dessiné sur canvas (12 px/mm),
-  aminci par Zhang-Suen, pixels chaînés en polylignes (Douglas-Peucker,
-  tol. 0,8 px) → `d` de <path> en mm relatif à (début du mot, base), mis en
-  cache par (texte, police, taille, italique) et NON caché tant que la police
-  n'est pas chargée. Placé par `translate` dans `makeCenterLine`
+- `js/skeleton.js` (`FE.Skeleton.compute`) : mot dessiné sur canvas à une taille
+  de RÉFÉRENCE fixe (em = 160 px), aminci par Zhang-Suen, pixels chaînés en
+  polylignes (Douglas-Peucker, tol. 0,8 px) exprimées en unités d'em. Ce calcul
+  lourd est fait UNE FOIS par (texte, police, italique) (`shapes`, NON mis en
+  cache tant que la police n'est pas chargée) ; `compute` ne fait ensuite
+  qu'une mise à l'échelle par la taille (`pathCache`). **Ne pas remettre la
+  taille dans la clé du calcul lourd** : il coûtait 165–750 ms par cran de
+  taille de police et rendait le curseur saccadé (maintenant ~13 ms/cran).
+  Placé par `translate` dans `makeCenterLine`
   (`dotted-text.js`). Pointillé : dash 0,22×d / gap 0,85×d (réglé au feeling : plus court = trop de points brouillons, plus long = trop de noir), trait 0,3–0,6 mm.
 - Le modèle plein reste le vrai texte ; seules les répétitions utilisent le
   squelette.
