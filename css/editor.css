@@ -359,7 +359,9 @@
 .block-tools {
   position: absolute;
   z-index: 8;
-  display: flex;
+  /* 2 colonnes × 2 rangées : « + » et poignée, puis dupliquer et supprimer. */
+  display: grid;
+  grid-template-columns: 22px 22px;
   gap: 4px;
 }
 
@@ -386,6 +388,22 @@
   color: var(--color-accent);
   border-color: var(--color-accent);
   background: var(--color-accent-soft);
+}
+
+.block-tools button.block-delete {
+  color: var(--color-danger);
+  border-color: var(--color-danger-soft);
+}
+
+.block-tools button.block-delete:hover {
+  color: #fff;
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.block-tools button svg {
+  display: block;
+  margin: 0 auto;
 }
 
 .block-handle {

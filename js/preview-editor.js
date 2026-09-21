@@ -464,6 +464,7 @@ FE.PreviewEditor = (function () {
   // Le bloc qui porte les outils : celui qu'on survole, sinon la ligne
   // sélectionnée (les outils restent donc tant qu'une ligne est sélectionnée).
   function toolsId() {
+    if (hoverId && indexOfLine(hoverId) < 0) hoverId = null; // ligne supprimée entre-temps
     return hoverId || selectedLineId;
   }
 
@@ -736,8 +737,31 @@ FE.PreviewEditor = (function () {
     handle.addEventListener("pointermove", onHandleMove);
     handle.addEventListener("pointerup", function () { endDrag(true); });
     handle.addEventListener("pointercancel", function () { endDrag(false); });
+    // 2e rangée : dupliquer et supprimer la ligne.
+    var dup = document.createElement("button");
+    dup.type = "button";
+    dup.className = "block-duplicate";
+    dup.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 3.5V3A1.5 1.5 0 0 0 9 1.5H3.5A1.5 1.5 0 0 0 2 3v5.5A1.5 1.5 0 0 0 3.5 10H4"/></svg>';
+    dup.title = "Dupliquer la ligne";
+    dup.setAttribute("aria-label", "Dupliquer la ligne");
+    dup.addEventListener("click", function () {
+      var id = toolsId();
+      if (id) duplicateLine(id);
+    });
+    var del = document.createElement("button");
+    del.type = "button";
+    del.className = "block-delete";
+    del.textContent = "✕";
+    del.title = "Supprimer la ligne";
+    del.setAttribute("aria-label", "Supprimer la ligne");
+    del.addEventListener("click", function () {
+      var id = toolsId();
+      if (id) deleteLine(findLine(id));
+    });
     toolsEl.appendChild(plus);
     toolsEl.appendChild(handle);
+    toolsEl.appendChild(dup);
+    toolsEl.appendChild(del);
     toolsEl.addEventListener("mouseenter", function () { clearTimeout(hoverTimer); });
     toolsEl.addEventListener("mouseleave", scheduleHoverEnd);
     layerEl.appendChild(toolsEl);

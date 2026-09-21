@@ -175,8 +175,9 @@ auto). Reste : validation par l'utilisateur, puis merge dans `main` (non fait).
     SÉLECTIONNÉE : ils restent tant qu'une ligne est sélectionnée). Un clic hors
     de la feuille (fond gris, panneau de gauche ; pas les pages, barre, outils,
     menu, champ de saisie, bouton d'ajout) désélectionne : cadre, barre et outils
-    disparaissent (`onDocumentMouseDown`). Contenu : « + » (insère dessous) et
-    poignée ⠿. Poignée : glisser = déplacer (pointer events, capture sur la
+    disparaissent (`onDocumentMouseDown`). Contenu (grille 2×2) : « + » (insère dessous) et
+    poignée ⠿, puis en dessous dupliquer (icône SVG) et ✕ rouge (supprimer) ; ces
+    boutons agissent sur `toolsId()` (survolé sinon sélectionné). Poignée : glisser = déplacer (pointer events, capture sur la
     poignée) ; simple clic (< 4 px) = `.block-menu` (insérer au-dessus /
     dessous, dupliquer, supprimer). Clavier : Suppr supprime le bloc
     sélectionné, Alt+↑/↓ le déplace, Échap annule un glissement / ferme le menu.
