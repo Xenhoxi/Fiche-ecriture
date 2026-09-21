@@ -43,7 +43,7 @@ serveur, Chrome bloquant les modules ES sous `file://`.
 
 ```js
 sheet = { id, name, createdAt, updatedAt, consigne, settings, lines[] }
-settings = { fontId, fontSizeMm: 8, fontStyle: "normal"|"italic", repetitions: 6, dashSizeMm: 2 }
+settings = { fontId, fontSizeMm: 8, fontStyle: "normal"|"italic", repetitions: 6, lineCount: 1, dotStyle: "single"|"double", dashSizeMm: 2 }
 line = { id, text, overrides: <settings partiel> }
 ```
 
@@ -106,6 +106,35 @@ par l'utilisateur et annulée.
   au lieu d'être collées à gauche avec un vide à droite. Pour annuler
   seulement ça : `git revert -m 1 e5bed45` (ou repartir de `c68b0ea`,
   Marelle seul). La branche `repartition-repetitions` existe aussi.
+
+### Retour à la ligne et nombre de lignes (2026-09-21, non commité)
+
+- `FE.DottedText.planRows()` découpe le texte en fragments : un fragment doit
+  tenir 2× dans la largeur (modèle + ≥1 répétition pointillée), sinon retour
+  à la ligne au dernier espace. Un mot seul trop large n'est pas coupé : une
+  ligne `model` (modèle seul) puis une ligne `dots` (pointillés seuls).
+- Réglage `lineCount` (slider « Nombre de lignes », 1–10, global + par ligne) :
+  nombre MINIMUM de lignes par entrée ; complétées par des lignes `dots`
+  (fragments repris en boucle). Le retour à la ligne peut dépasser `lineCount`.
+- `layoutLine(..., kind)` : `"full"` | `"model"` | `"dots"`.
+- Piège : la mesure (`getComputedTextLength`) exige un SVG attaché ET un
+  conteneur avec une hauteur (sinon 0) ; ne pas vider le conteneur avant la
+  fin des mesures. Elle vaut aussi 0 tant que la police n'est pas chargée
+  (rattrapé par `reloadIfFontsPending`).
+
+### Pointillé simple / double (2026-09-21, non commité)
+
+- `dotStyle` (toggle « Pointillés doubles », global + par ligne), défaut
+  `"single"`. `"double"` = ancien rendu (contour du glyphe pointillé, donc
+  2 traits par jambage). `"single"` = un seul trait pointillé au centre.
+- `js/skeleton.js` (`FE.Skeleton.compute`) : mot dessiné sur canvas (12 px/mm),
+  aminci par Zhang-Suen, pixels chaînés en polylignes (Douglas-Peucker,
+  tol. 0,8 px) → `d` de <path> en mm relatif à (début du mot, base), mis en
+  cache par (texte, police, taille, italique) et NON caché tant que la police
+  n'est pas chargée. Placé par `translate` dans `makeCenterLine`
+  (`dotted-text.js`). Pointillé : dash 0,22×d / gap 0,85×d (réglé au feeling : plus court = trop de points brouillons, plus long = trop de noir), trait 0,3–0,6 mm.
+- Le modèle plein reste le vrai texte ; seules les répétitions utilisent le
+  squelette.
 
 ### Police / italique
 

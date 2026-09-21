@@ -109,13 +109,28 @@ FE.Render = (function () {
       sheet.lines.forEach(function (line) {
         var resolved = FE.Model.resolveLineSettings(sheet, line);
         var metrics = computeRowMetrics(resolved.fontSizeMm, FE.Fonts.getById(resolved.fontId));
+        var text = line.text.trim();
 
-        var row = document.createElement("div");
-        row.className = "ligne-ecriture";
-        row.style.height = metrics.rowHeightMm + "mm";
-        page.appendChild(row);
+        // Ligne vide : une seule ligne réglée, ou lineCount lignes vierges.
+        var plan = [];
+        if (text) {
+          var probe = document.createElement("div");
+          probe.className = "ligne-ecriture";
+          probe.style.height = "10mm"; // sans hauteur, le SVG n'est pas rendu et la mesure vaut 0
+          page.appendChild(probe);
+          plan = FE.DottedText.planRows(probe, text, resolved, PAGE.contentWidthMm);
+          page.removeChild(probe);
+        } else {
+          for (var i = 0; i < Math.max(1, resolved.lineCount || 1); i++) plan.push({ text: "", kind: "full" });
+        }
 
-        FE.DottedText.layoutLine(row, line.text.trim(), resolved, PAGE.contentWidthMm, metrics.rowHeightMm, metrics);
+        plan.forEach(function (r) {
+          var row = document.createElement("div");
+          row.className = "ligne-ecriture";
+          row.style.height = metrics.rowHeightMm + "mm";
+          page.appendChild(row);
+          FE.DottedText.layoutLine(row, r.text, resolved, PAGE.contentWidthMm, metrics.rowHeightMm, metrics, r.kind);
+        });
       });
     }
 

@@ -86,16 +86,100 @@ FE.DottedText = (function () {
     return node;
   }
 
+  // Trait central pointillé d'une occurrence : `d` est en mm relatif à
+  // (début du mot, ligne de base), on le place par translation.
+  function makeCenterLine(d, x, baselineY, dashSizeMm) {
+    return el("path", {
+      d: d,
+      transform: "translate(" + x + " " + baselineY + ")",
+      fill: "none",
+      stroke: "#1a1a1a",
+      "stroke-width": Math.max(0.3, Math.min(0.6, dashSizeMm * 0.22)),
+      "stroke-dasharray": (dashSizeMm * 0.22).toFixed(2) + "," + (dashSizeMm * 0.85).toFixed(2),
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round"
+    });
+  }
+
+  function measureNode(node, text, fontSizeMm) {
+    try {
+      return node.getComputedTextLength();
+    } catch (e) {
+      return text.length * fontSizeMm * 0.6; // repli si la mesure échoue
+    }
+  }
+
+  // Découpe le texte en lignes d'écriture. Un fragment doit pouvoir contenir
+  // le modèle ET au moins une répétition en pointillé (2 × sa largeur) : sinon
+  // on renvoie à la ligne au dernier espace possible. Un mot seul trop large
+  // pour cela n'est pas coupé : le modèle prend sa ligne, la répétition
+  // pointillée passe sur la suivante. Puis on complète avec des lignes de
+  // pointillés seuls jusqu'à `resolved.lineCount` lignes (les fragments
+  // reviennent en boucle). Renvoie [{ text, kind }].
+  // `container` doit être attaché au document (mesure du texte).
+  function planRows(container, text, resolved, availableWidthMm) {
+    var font = FE.Fonts.getById(resolved.fontId);
+    var fontSizeMm = resolved.fontSizeMm * FE.Render.FONT_SCALE;
+    var italic = resolved.fontStyle === "italic" && FE.Fonts.supportsItalic(resolved.fontId);
+    var minGapMm = Math.max(1, resolved.fontSizeMm * 0.15);
+    var svg = createLineSvg(container, availableWidthMm, 1);
+    var cache = {};
+
+    function width(t) {
+      if (cache[t] === undefined) {
+        var n = makeTextNode(t, 0, 0, font.family, fontSizeMm, italic, "solid");
+        svg.appendChild(n);
+        cache[t] = measureNode(n, t, fontSizeMm);
+        svg.removeChild(n);
+      }
+      return cache[t];
+    }
+    function fitsTwice(t) { return width(t) * 2 + minGapMm <= availableWidthMm; }
+
+    var words = text.split(/\s+/).filter(Boolean);
+    var fragments = [];
+    var current = "";
+    words.forEach(function (word) {
+      var candidate = current ? current + " " + word : word;
+      if (!current || fitsTwice(candidate)) {
+        current = candidate;
+      } else {
+        fragments.push(current);
+        current = word;
+      }
+    });
+    if (current) fragments.push(current);
+
+    var rows = [];
+    fragments.forEach(function (frag) {
+      if (fitsTwice(frag)) {
+        rows.push({ text: frag, kind: "full" });
+      } else {
+        rows.push({ text: frag, kind: "model" });
+        rows.push({ text: frag, kind: "dots" });
+      }
+    });
+    var wanted = Math.max(1, resolved.lineCount || 1);
+    for (var i = 0; rows.length < wanted && fragments.length; i++) {
+      rows.push({ text: fragments[i % fragments.length], kind: "dots" });
+    }
+    container.innerHTML = "";
+    return rows;
+  }
+
   // Construit et positionne les répétitions du texte sur la ligne, puis les
   // repères de réglure. `metrics` (mm depuis le haut du bloc) est calculé
   // par FE.Render selon la taille choisie, pour que le mot et les repères
   // soient cohérents entre eux.
   // Doit être appelé APRÈS que le SVG soit attaché au document (pour que
   // getComputedTextLength() renvoie une mesure correcte).
-  function layoutLine(container, text, resolved, availableWidthMm, rowHeightMm, metrics) {
+  // `kind` : "full" (modèle + pointillés, défaut), "model" (modèle seul) ou
+  // "dots" (pointillés seuls, pour les lignes d'entraînement supplémentaires).
+  function layoutLine(container, text, resolved, availableWidthMm, rowHeightMm, metrics, kind) {
+    kind = kind || "full";
     var font = FE.Fonts.getById(resolved.fontId);
     var fontSizeMm = resolved.fontSizeMm * FE.Render.FONT_SCALE; // ajustement visuel corps de lettre vs em SVG
-    var repetitions = Math.max(1, resolved.repetitions);
+    var repetitions = kind === "model" ? 1 : Math.max(1, resolved.repetitions);
     var strokeWidthMm = Math.max(0.2, resolved.dashSizeMm * 0.28);
     // Marelle est à trait fin et régulier : un contour de 0,5 mm y fusionne
     // les deux bords du trait en un bloc illisible, on l'affine donc.
@@ -114,12 +198,7 @@ FE.DottedText = (function () {
     // Mesure la largeur réelle du mot dans la police/taille active.
     var measurer = makeTextNode(text, 0, metrics.baselineY, font.family, fontSizeMm, italic, "solid");
     svg.appendChild(measurer);
-    var wordWidth = 0;
-    try {
-      wordWidth = measurer.getComputedTextLength();
-    } catch (e) {
-      wordWidth = text.length * fontSizeMm * 0.6; // repli si la mesure échoue
-    }
+    var wordWidth = measureNode(measurer, text, fontSizeMm);
     svg.removeChild(measurer);
 
     var idealSlotWidth = availableWidthMm / repetitions;
@@ -137,12 +216,21 @@ FE.DottedText = (function () {
     slotWidth = availableWidthMm / visibleCount;
     var startPadding = Math.max(0, (slotWidth - wordWidth) / 2);
 
+    // Pointillé simple : ligne centrale des lettres (calculée une seule fois).
+    var centerD = kind !== "model" && resolved.dotStyle !== "double"
+      ? FE.Skeleton.compute(text, font.family, fontSizeMm, italic)
+      : "";
+
     for (var i = 0; i < visibleCount; i++) {
-      var mode = i === 0 ? "solid" : "outline";
+      var mode = i === 0 && kind !== "dots" ? "solid" : "outline";
       // Le mot modèle (1ère occurrence) reste toujours collé à gauche,
       // jamais centré dans son emplacement — seules les occurrences à
       // repasser sont centrées dans le leur.
-      var x = i === 0 ? 0 : (i * slotWidth + startPadding);
+      var x = i === 0 && kind !== "dots" ? 0 : (i * slotWidth + startPadding);
+      if (mode === "outline" && resolved.dotStyle !== "double") {
+        svg.appendChild(makeCenterLine(centerD, x, metrics.baselineY, resolved.dashSizeMm));
+        continue;
+      }
       var node = makeTextNode(text, x, metrics.baselineY, font.family, fontSizeMm, italic, mode, strokeWidthMm, dashArray);
       svg.appendChild(node);
     }
@@ -151,6 +239,7 @@ FE.DottedText = (function () {
   }
 
   return {
-    layoutLine: layoutLine
+    layoutLine: layoutLine,
+    planRows: planRows
   };
 })();

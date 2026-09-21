@@ -121,9 +121,17 @@ FE.UI = (function () {
       min: 1, max: 20, step: 1, value: values.repetitions, unit: "×"
     }, function (v) { onChange("repetitions", v); }));
 
+    container.appendChild(buildSliderField("Nombre de lignes", {
+      min: 1, max: 10, step: 1, value: values.lineCount, unit: ""
+    }, function (v) { onChange("lineCount", v); }));
+
     container.appendChild(buildSliderField("Taille des pointillés", {
       min: 0.8, max: 5, step: 0.2, value: values.dashSizeMm, unit: "mm"
     }, function (v) { onChange("dashSizeMm", v); }));
+
+    container.appendChild(buildToggleField("Pointillés doubles (contour des lettres)", values.dotStyle === "double", function (checked) {
+      onChange("dotStyle", checked ? "double" : "single");
+    }));
 
     italicField = buildToggleField("Italique", values.fontStyle === "italic", function (checked) {
       onChange("fontStyle", checked ? "italic" : "normal");

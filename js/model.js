@@ -14,6 +14,8 @@ FE.Model = (function () {
       fontSizeMm: 8,
       fontStyle: "normal", // "normal" | "italic"
       repetitions: 6,
+      dotStyle: "single", // "single" = un trait central pointillé, "double" = contour des lettres pointillé
+      lineCount: 1, // nombre minimum de lignes d'écriture par mot/phrase
       dashSizeMm: 2 // taille des petits tirés du pointillé à repasser
     };
   }
@@ -65,7 +67,9 @@ FE.Model = (function () {
     sheet.settings = Object.assign({}, defaults, sheet.settings || {});
     sheet.settings.fontSizeMm = clampNumber(sheet.settings.fontSizeMm, 3, 40, defaults.fontSizeMm);
     sheet.settings.repetitions = Math.round(clampNumber(sheet.settings.repetitions, 1, 30, defaults.repetitions));
+    sheet.settings.lineCount = Math.round(clampNumber(sheet.settings.lineCount, 1, 10, defaults.lineCount));
     sheet.settings.dashSizeMm = clampNumber(sheet.settings.dashSizeMm, 0.6, 6, defaults.dashSizeMm);
+    if (sheet.settings.dotStyle !== "double") sheet.settings.dotStyle = "single";
     if (sheet.settings.fontStyle !== "italic") sheet.settings.fontStyle = "normal";
     delete sheet.settings.lineStyle; // ancien réglage, styles "double"/"plein" retirés
 
@@ -80,9 +84,13 @@ FE.Model = (function () {
       if (line.overrides.repetitions !== undefined) {
         line.overrides.repetitions = Math.round(clampNumber(line.overrides.repetitions, 1, 30, defaults.repetitions));
       }
+      if (line.overrides.lineCount !== undefined) {
+        line.overrides.lineCount = Math.round(clampNumber(line.overrides.lineCount, 1, 10, defaults.lineCount));
+      }
       if (line.overrides.dashSizeMm !== undefined) {
         line.overrides.dashSizeMm = clampNumber(line.overrides.dashSizeMm, 0.6, 6, defaults.dashSizeMm);
       }
+      if (line.overrides.dotStyle !== undefined && line.overrides.dotStyle !== "double") line.overrides.dotStyle = "single";
       delete line.overrides.lineStyle; // ancien réglage, styles "double"/"plein" retirés
     });
 
